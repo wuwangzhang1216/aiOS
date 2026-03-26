@@ -1,0 +1,26 @@
+# T3.1: Weekly Digest (4-app aggregation)
+scenario_id: T3.1
+tier: 3
+apps: [gitea, miniflux, vikunja, mattermost]
+category: multi_hop_workflow
+
+variants:
+  - id: T3.1a
+    task: >
+      Generate a weekly team digest by:
+      1. Reading open issues from Gitea's "backend-api" repo
+      2. Reading unread RSS entries from Miniflux
+      3. Reading open tasks from Vikunja's "Backend API" project
+      4. Posting a formatted summary to Mattermost's "general" channel
+
+      The digest should include sections: Code Issues, Interesting Reads, Open Tasks.
+    postcondition: "SELECT 1 FROM posts p JOIN channels c ON p.channelid = c.id WHERE c.name = 'general' AND p.message LIKE '%Issues%' AND p.message LIKE '%Tasks%'"
+
+  - id: T3.1b
+    task: >
+      Generate a per-person activity report:
+      1. For user alice: get her Gitea issues and Vikunja tasks
+      2. For user bob: get his Gitea issues and Vikunja tasks
+      3. Post the report to Mattermost's "sprint-planning" channel
+         with a section per person showing their items.
+    postcondition: "SELECT 1 FROM posts p JOIN channels c ON p.channelid = c.id WHERE c.name = 'sprint-planning' AND p.message LIKE '%alice%' AND p.message LIKE '%bob%'"

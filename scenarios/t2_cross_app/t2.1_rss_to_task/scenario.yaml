@@ -1,0 +1,20 @@
+# T2.1: RSS Entry → Vikunja Task
+scenario_id: T2.1
+tier: 2
+apps: [miniflux, vikunja]
+category: cross_app_workflow
+
+variants:
+  - id: T2.1a
+    task: >
+      Find the RSS entry about "database migrations" in Miniflux.
+      Create a Vikunja task in the "Backend API" project titled
+      "Review: [title of the RSS entry]" with the entry URL in the description.
+    postcondition: "SELECT 1 FROM tasks WHERE title LIKE '%migration%' AND project_id = (SELECT id FROM projects WHERE title = 'Backend API')"
+
+  - id: T2.1b
+    task: >
+      Find all unread Miniflux entries from the "Kubernetes Blog" feed.
+      Create a Vikunja task in the "Infrastructure" project for each one,
+      with the entry title as the task title.
+    postcondition: "SELECT 1 FROM tasks WHERE title LIKE '%Kubernetes%' AND project_id = (SELECT id FROM projects WHERE title = 'Infrastructure')"

@@ -1,0 +1,20 @@
+# T2.2: Mattermost Message → Gitea Issue
+scenario_id: T2.2
+tier: 2
+apps: [mattermost, gitea]
+category: cross_app_workflow
+
+variants:
+  - id: T2.2a
+    task: >
+      Find the message from bob in Mattermost that mentions "connection pool exhaustion".
+      Create a Gitea issue in the "backend-api" repository (owned by alice) with
+      the message content as the issue body. Set a concise issue title.
+    postcondition: "SELECT 1 FROM issue WHERE repo_id = (SELECT id FROM repository WHERE lower_name = 'backend-api') AND content LIKE '%connection pool%'"
+
+  - id: T2.2b
+    task: >
+      Find messages about "circuit breaker" in the Mattermost "backend" channel.
+      Create a Gitea issue in "backend-api" titled "Implement circuit breaker"
+      with the relevant messages in the body.
+    postcondition: "SELECT 1 FROM issue WHERE name LIKE '%circuit breaker%'"

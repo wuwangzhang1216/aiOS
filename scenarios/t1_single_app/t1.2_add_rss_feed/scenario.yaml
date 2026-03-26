@@ -1,0 +1,18 @@
+# T1.2: Add an RSS Feed in Miniflux
+scenario_id: T1.2
+tier: 1
+apps: [miniflux]
+category: single_app_crud
+
+variants:
+  - id: T1.2a
+    task: >
+      Add a new RSS feed for "https://example.com/rss" in the Miniflux database
+      under the "Tech News" category. Set the site title to "Example Tech Blog".
+    postcondition: "SELECT 1 FROM feeds WHERE feed_url = 'https://example.com/rss'"
+
+  - id: T1.2b
+    task: >
+      Create a new category called "Security" in Miniflux and add the feed
+      "https://feeds.feedburner.com/TheHackersNews" with title "The Hacker News".
+    postcondition: "SELECT 1 FROM feeds f JOIN categories c ON f.category_id = c.id WHERE c.title = 'Security'"

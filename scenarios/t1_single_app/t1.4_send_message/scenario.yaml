@@ -1,0 +1,18 @@
+# T1.4: Send a Message in Mattermost
+scenario_id: T1.4
+tier: 1
+apps: [mattermost]
+category: single_app_crud
+
+variants:
+  - id: T1.4a
+    task: >
+      Send a message "Deployment completed successfully" from user "alice"
+      to the "backend" channel in Mattermost.
+    postcondition: "SELECT 1 FROM posts WHERE message LIKE '%Deployment completed%'"
+
+  - id: T1.4b
+    task: >
+      Find the "devops" channel in Mattermost and post a message from "bob"
+      saying "CI pipeline is now green - all 47 tests passing".
+    postcondition: "SELECT 1 FROM posts p JOIN channels c ON p.channelid = c.id WHERE c.name = 'devops' AND p.message LIKE '%CI pipeline%'"

@@ -1,0 +1,18 @@
+# T2.3: Vikunja Completed Task → Mattermost Notification
+scenario_id: T2.3
+tier: 2
+apps: [vikunja, mattermost]
+category: cross_app_workflow
+
+variants:
+  - id: T2.3a
+    task: >
+      Find all completed tasks (done = true) in Vikunja's "Infrastructure" project.
+      Post a summary message to the Mattermost "devops" channel listing what was completed.
+    postcondition: "SELECT 1 FROM posts p JOIN channels c ON p.channelid = c.id WHERE c.name = 'devops' AND p.message LIKE '%completed%'"
+
+  - id: T2.3b
+    task: >
+      Find all high-priority (priority >= 3) open tasks in Vikunja.
+      Post an alert to the Mattermost "general" channel listing these urgent items.
+    postcondition: "SELECT 1 FROM posts p JOIN channels c ON p.channelid = c.id WHERE c.name = 'general' AND p.message LIKE '%urgent%' OR p.message LIKE '%priority%'"

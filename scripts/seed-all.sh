@@ -10,50 +10,33 @@ echo "════════════════════════�
 echo "  Seeding databases with sample data       "
 echo "═══════════════════════════════════════════"
 
-# Load environment
-if [ -f "$PROJECT_DIR/.env" ]; then
-    set -a
-    source "$PROJECT_DIR/.env"
-    set +a
-fi
+seed_pg() {
+    local name=$1 container=$2 db=$3 file=$4
+    echo -n "  Seeding $name..."
+    if docker exec -i "$container" psql -U postgres -d "$db" < "$PROJECT_DIR/seeds/$file" >/dev/null 2>&1; then
+        echo " done"
+    else
+        echo " FAILED (schema may not be ready yet)"
+    fi
+}
 
-GITEA_PASS="${GITEA_DB_PASS:-gitea_secret}"
-WIKI_PASS="${WIKI_DB_PASS:-wiki_secret}"
-MM_PASS="${MM_DB_PASS:-mm_secret}"
+seed_pg "Gitea"       pg-gitea      gitea      gitea_seed.sql
+seed_pg "Miniflux"    pg-miniflux   miniflux   miniflux_seed.sql
+seed_pg "Vikunja"     pg-vikunja    vikunja    vikunja_seed.sql
+seed_pg "Mattermost"  pg-mattermost mattermost mattermost_seed.sql
 
-# Seed Gitea
-echo -n "  Seeding Gitea..."
-if PGPASSWORD="$GITEA_PASS" psql -h localhost -p 5501 -U postgres -d gitea \
-    -f "$PROJECT_DIR/seeds/gitea_seed.sql" >/dev/null 2>&1; then
-    echo " done"
-else
-    echo " FAILED (schema may not be ready yet)"
-fi
-
-# Seed Wiki.js
-echo -n "  Seeding Wiki.js..."
-if PGPASSWORD="$WIKI_PASS" psql -h localhost -p 5502 -U postgres -d wikijs \
-    -f "$PROJECT_DIR/seeds/wikijs_seed.sql" >/dev/null 2>&1; then
-    echo " done"
-else
-    echo " FAILED (schema may not be ready yet)"
-fi
-
-# Seed Mattermost
-echo -n "  Seeding Mattermost..."
-if PGPASSWORD="$MM_PASS" psql -h localhost -p 5504 -U postgres -d mattermost \
-    -f "$PROJECT_DIR/seeds/mattermost_seed.sql" >/dev/null 2>&1; then
-    echo " done"
-else
-    echo " FAILED (schema may not be ready yet)"
-fi
-
-# Grant permissions to agent users (in case init scripts didn't run)
+# Grant permissions to agent users
 echo ""
 echo "  Granting agent user permissions..."
-for db_info in "5501:gitea:$GITEA_PASS" "5502:wikijs:$WIKI_PASS" "5504:mattermost:$MM_PASS"; do
-    IFS=':' read -r port dbname pass <<< "$db_info"
-    PGPASSWORD="$pass" psql -h localhost -p "$port" -U postgres -d "$dbname" -c "
+for db_info in "pg-gitea:gitea" "pg-miniflux:miniflux" "pg-vikunja:vikunja" "pg-mattermost:mattermost"; do
+    IFS=':' read -r container dbname <<< "$db_info"
+    docker exec "$container" psql -U postgres -d "$dbname" -c "
+        DO \$\$ BEGIN
+            CREATE ROLE agent_ro LOGIN PASSWORD 'agent_ro_pass';
+        EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;
+        DO \$\$ BEGIN
+            CREATE ROLE agent_rw LOGIN PASSWORD 'agent_rw_pass';
+        EXCEPTION WHEN duplicate_object THEN NULL; END \$\$;
         GRANT SELECT ON ALL TABLES IN SCHEMA public TO agent_ro;
         GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO agent_rw;
         GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO agent_rw;

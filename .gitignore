@@ -10,8 +10,9 @@ __pycache__/
 # Node
 node_modules/
 
-# Third-party cloned repos
-mcp_control/miniflux_src/
+# MCP control (generated)
+mcp_control/node_modules/
+mcp_control/package-lock.json
 
 # Results (large, generated)
 results/transcripts/

@@ -1,6 +1,6 @@
 {
   "experiment": "bash-db-agent-os",
-  "version": "mvp-v1",
+  "version": "v2-simplified",
   "llm": {
     "provider": "openrouter",
     "model": "minimax/minimax-m2.7",
@@ -11,7 +11,7 @@
     {
       "id": "gitea",
       "name": "Gitea (Code & Git)",
-      "description": "Self-hosted Git service with issue tracking, pull requests, and code review",
+      "description": "Self-hosted Git service with issue tracking and code review",
       "type": "postgresql",
       "connection": {
         "container": "pg-gitea",
@@ -22,32 +22,47 @@
       "cli_command": "docker exec pg-gitea psql -U agent_rw -d gitea -c",
       "permissions": ["read", "write"],
       "key_tables": [
-        "repository", "issue", "comment", "\"user\"", "team",
-        "label", "issue_label", "milestone", "pull_request"
+        "repository", "issue", "comment", "\"user\"", "label", "issue_label"
       ]
     },
     {
-      "id": "wikijs",
-      "name": "Wiki.js (Knowledge Base)",
-      "description": "Modern wiki engine with markdown support, tagging, and page hierarchy",
+      "id": "miniflux",
+      "name": "Miniflux (RSS Reader)",
+      "description": "Minimalist RSS feed reader with categories and entries",
       "type": "postgresql",
       "connection": {
-        "container": "pg-wiki",
-        "database": "wikijs",
+        "container": "pg-miniflux",
+        "database": "miniflux",
         "user": "agent_rw"
       },
-      "cli_connect": "docker exec pg-wiki psql -U agent_rw -d wikijs",
-      "cli_command": "docker exec pg-wiki psql -U agent_rw -d wikijs -c",
+      "cli_connect": "docker exec pg-miniflux psql -U agent_rw -d miniflux",
+      "cli_command": "docker exec pg-miniflux psql -U agent_rw -d miniflux -c",
       "permissions": ["read", "write"],
       "key_tables": [
-        "pages", "\"pageHistory\"", "\"pageLinks\"", "\"pageTags\"",
-        "tags", "comments", "users", "groups"
+        "feeds", "entries", "categories", "users", "feed_icons"
+      ]
+    },
+    {
+      "id": "vikunja",
+      "name": "Vikunja (Task Management)",
+      "description": "Open-source task and project management with labels and teams",
+      "type": "postgresql",
+      "connection": {
+        "container": "pg-vikunja",
+        "database": "vikunja",
+        "user": "agent_rw"
+      },
+      "cli_connect": "docker exec pg-vikunja psql -U agent_rw -d vikunja",
+      "cli_command": "docker exec pg-vikunja psql -U agent_rw -d vikunja -c",
+      "permissions": ["read", "write"],
+      "key_tables": [
+        "projects", "tasks", "labels", "label_tasks", "users", "buckets"
       ]
     },
     {
       "id": "mattermost",
       "name": "Mattermost (Team Chat)",
-      "description": "Open-source team messaging with channels, direct messages, and integrations",
+      "description": "Open-source team messaging with channels and direct messages",
       "type": "postgresql",
       "connection": {
         "container": "pg-mattermost",
@@ -58,8 +73,7 @@
       "cli_command": "docker exec pg-mattermost psql -U agent_rw -d mattermost -c",
       "permissions": ["read", "write"],
       "key_tables": [
-        "posts", "channels", "channelmembers", "users",
-        "teams", "teammembers", "reactions", "fileinfo"
+        "posts", "channels", "channelmembers", "users", "teams", "teammembers"
       ]
     }
   ]

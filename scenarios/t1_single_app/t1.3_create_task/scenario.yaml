@@ -1,0 +1,19 @@
+# T1.3: Create a Task in Vikunja
+scenario_id: T1.3
+tier: 1
+apps: [vikunja]
+category: single_app_crud
+
+variants:
+  - id: T1.3a
+    task: >
+      Create a new task in the "Backend API" project in Vikunja titled
+      "Implement caching layer" with description "Add Redis caching for frequently accessed endpoints".
+      Assign priority 2.
+    postcondition: "SELECT 1 FROM tasks WHERE title = 'Implement caching layer' AND project_id = (SELECT id FROM projects WHERE title = 'Backend API')"
+
+  - id: T1.3b
+    task: >
+      Create a task "Fix login timeout" in the "Backend API" project and
+      assign the "bug" label to it.
+    postcondition: "SELECT 1 FROM tasks t JOIN label_tasks lt ON lt.task_id = t.id JOIN labels l ON l.id = lt.label_id WHERE t.title = 'Fix login timeout' AND l.title = 'bug'"

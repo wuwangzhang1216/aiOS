@@ -1,15 +1,9 @@
 {
-  "description": "This is ALL an AI agent needs to operate 10 applications. One map. One tool (bash).",
+  "description": "This is ALL an AI agent needs to operate 4 applications. One map. One tool (bash).",
   "apps": {
-    "gitea":      { "what": "Git & Code", "db": "docker exec pg-gitea psql -U postgres -d gitea" },
-    "wikijs":     { "what": "Wiki / Knowledge Base", "db": "docker exec pg-wiki psql -U postgres -d wikijs" },
-    "mattermost": { "what": "Team Chat", "db": "docker exec pg-mattermost psql -U postgres -d mattermost" },
-    "vikunja":    { "what": "Task Management", "db": "docker exec pg-vikunja psql -U postgres -d vikunja" },
-    "nocodb":     { "what": "Spreadsheet / Database UI", "db": "docker exec pg-nocodb psql -U postgres -d nocodb" },
-    "miniflux":   { "what": "RSS Reader", "db": "docker exec pg-miniflux psql -U postgres -d miniflux" },
-    "grafana":    { "what": "Monitoring Dashboard", "db": "docker exec pg-grafana psql -U postgres -d grafana" },
-    "redmine":    { "what": "Issue Tracker", "db": "docker exec pg-redmine psql -U postgres -d redmine" },
-    "directus":   { "what": "Headless CMS", "db": "docker exec pg-directus psql -U postgres -d directus" },
-    "hasura":     { "what": "GraphQL Engine", "db": "docker exec pg-memos psql -U postgres -d memos" }
+    "gitea":      { "what": "Git & Code",        "db": "docker exec pg-gitea psql -U postgres -d gitea" },
+    "miniflux":   { "what": "RSS Reader",         "db": "docker exec pg-miniflux psql -U postgres -d miniflux" },
+    "vikunja":    { "what": "Task Management",    "db": "docker exec pg-vikunja psql -U postgres -d vikunja" },
+    "mattermost": { "what": "Team Chat",          "db": "docker exec pg-mattermost psql -U postgres -d mattermost" }
   }
 }
