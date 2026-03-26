@@ -1,0 +1,118 @@
+[
+  {
+    "variant": "T0.1a",
+    "tier": 0,
+    "category": "schema_discovery",
+    "arm": "sql",
+    "score": 1.0,
+    "class": "A",
+    "turns": 7,
+    "tokens": {
+      "input": 22783,
+      "output": 1471,
+      "total": 24254
+    },
+    "sql_ops": {
+      "schema_discovery": 4,
+      "read": 3,
+      "write": 1,
+      "transaction": 0,
+      "failed": 0
+    },
+    "elapsed_s": 26.3,
+    "pc_details": {
+      "postcondition": {
+        "passed": true,
+        "detail": "passed",
+        "database": "miniflux"
+      }
+    }
+  },
+  {
+    "variant": "T0.1b",
+    "tier": 0,
+    "category": "schema_discovery",
+    "arm": "sql",
+    "score": 1.0,
+    "class": "A",
+    "turns": 12,
+    "tokens": {
+      "input": 51344,
+      "output": 2476,
+      "total": 53820
+    },
+    "sql_ops": {
+      "schema_discovery": 9,
+      "read": 8,
+      "write": 1,
+      "transaction": 0,
+      "failed": 2
+    },
+    "elapsed_s": 40.2,
+    "pc_details": {
+      "postcondition": {
+        "passed": true,
+        "detail": "passed",
+        "database": "vikunja"
+      }
+    }
+  },
+  {
+    "variant": "T0.2a",
+    "tier": 0,
+    "category": "schema_discovery",
+    "arm": "sql",
+    "score": 1.0,
+    "class": "A",
+    "turns": 10,
+    "tokens": {
+      "input": 58742,
+      "output": 2018,
+      "total": 60760
+    },
+    "sql_ops": {
+      "schema_discovery": 7,
+      "read": 3,
+      "write": 1,
+      "transaction": 0,
+      "failed": 1
+    },
+    "elapsed_s": 40.4,
+    "pc_details": {
+      "postcondition": {
+        "passed": true,
+        "detail": "passed",
+        "database": "mattermost"
+      }
+    }
+  },
+  {
+    "variant": "T0.2b",
+    "tier": 0,
+    "category": "schema_discovery",
+    "arm": "sql",
+    "score": 1.0,
+    "class": "A",
+    "turns": 13,
+    "tokens": {
+      "input": 94224,
+      "output": 3184,
+      "total": 97408
+    },
+    "sql_ops": {
+      "schema_discovery": 8,
+      "read": 11,
+      "write": 1,
+      "transaction": 0,
+      "failed": 1
+    },
+    "elapsed_s": 54.6,
+    "pc_details": {
+      "postcondition": {
+        "passed": true,
+        "detail": "passed",
+        "database": "mattermost"
+      }
+    }
+  }
+]
