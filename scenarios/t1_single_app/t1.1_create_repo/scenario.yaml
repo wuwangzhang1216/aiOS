@@ -1,0 +1,49 @@
+# T1.1: Create a Git Repository in Gitea
+# Tier: 1 (Single-App CRUD)
+# App: Gitea
+# Test: Agent can discover Gitea's schema and INSERT a new repository
+
+scenario_id: T1.1
+tier: 1
+apps: [gitea]
+category: single_app_crud
+description: Create a new Git repository in Gitea via direct database access
+
+variants:
+  - id: T1.1a
+    name: Default settings
+    task: >
+      Create a new public Git repository called "test-repo-default" owned by user "alice"
+      in the Gitea database. The repository should have the description
+      "A test repository created by the AI agent".
+    postconditions_file: postconditions_a.sql
+
+  - id: T1.1b
+    name: Unicode name
+    task: >
+      Create a new public Git repository called "测试仓库-unicode" owned by user "alice"
+      in the Gitea database. The description should be "Unicode test: 你好世界 🌍".
+    postconditions_file: postconditions_b.sql
+
+  - id: T1.1c
+    name: Create under organization
+    task: >
+      First, check if there is an organization named "engineering-team" in Gitea.
+      If not, note that it doesn't exist. Then create a public repository called
+      "shared-tools" owned by user "bob" with description "Shared engineering tools".
+    postconditions_file: postconditions_c.sql
+
+  - id: T1.1d
+    name: Private repository
+    task: >
+      Create a private Git repository called "secret-project" owned by user "alice"
+      in the Gitea database. Set is_private to true. Description: "Confidential project".
+    postconditions_file: postconditions_d.sql
+
+  - id: T1.1e
+    name: Duplicate name handling
+    task: >
+      Try to create a repository called "backend-api" owned by user "alice" in Gitea.
+      This repository already exists (from seed data). Handle the conflict appropriately
+      and report what happened. If it already exists, instead create "backend-api-v2".
+    postconditions_file: postconditions_e.sql

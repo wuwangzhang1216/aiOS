@@ -1,0 +1,83 @@
+{
+  "description": "MCP server config for all 10 apps (v2)",
+  "servers": {
+    "gitea": {
+      "command": "node",
+      "args": ["node_modules/@boringstudio_org/gitea-mcp/index.js"],
+      "env": {}
+    },
+    "wikijs": {
+      "command": "node",
+      "args": ["node_modules/@cahaseler/wikijs-mcp/build/index.js"],
+      "env": {
+        "WIKIJS_URL": "http://localhost:3001",
+        "WIKIJS_API_KEY": "${WIKIJS_API_TOKEN}"
+      }
+    },
+    "mattermost": {
+      "command": "node",
+      "args": ["node_modules/@dakatan/mcp-mattermost/build/index.js"],
+      "env": {
+        "MCP_MATTERMOST_URL": "http://localhost:3006",
+        "MCP_MATTERMOST_TOKEN": "${MM_API_TOKEN}",
+        "MCP_MATTERMOST_TEAM_NAME": "experiment"
+      }
+    },
+    "vikunja": {
+      "command": "node",
+      "args": ["node_modules/@0xk3vin/vikunja-mcp/dist/index.js"],
+      "env": {
+        "VIKUNJA_URL": "http://localhost:3002/api/v1",
+        "VIKUNJA_TOKEN": "${VIKUNJA_API_TOKEN}"
+      }
+    },
+    "nocodb": {
+      "command": "node",
+      "args": ["node_modules/nocodb-mcp-server/dist/start.js"],
+      "env": {
+        "NOCODB_BASE_URL": "http://localhost:3005",
+        "NOCODB_API_TOKEN": "${NOCODB_API_TOKEN}"
+      }
+    },
+    "miniflux": {
+      "command": "node",
+      "args": ["node_modules/miniflux-mcp/dist/server.js"],
+      "env": {
+        "MINIFLUX_URL": "http://localhost:3007",
+        "MINIFLUX_API_KEY": "${MINIFLUX_API_TOKEN}"
+      }
+    },
+    "grafana": {
+      "command": "node",
+      "args": ["node_modules/mcp-grafana-npx/index.js"],
+      "env": {
+        "GRAFANA_URL": "http://localhost:3003",
+        "GRAFANA_API_KEY": "${GRAFANA_API_TOKEN}"
+      }
+    },
+    "redmine": {
+      "command": "node",
+      "args": ["node_modules/@thelabnyc/redmine-mcp/dist/cli.js"],
+      "env": {
+        "REDMINE_URL": "http://localhost:3008",
+        "REDMINE_API_KEY": "${REDMINE_API_TOKEN}"
+      }
+    },
+    "directus": {
+      "command": "node",
+      "args": ["node_modules/directus-mcp-server/server.js"],
+      "env": {
+        "DIRECTUS_URL": "http://localhost:3009",
+        "DIRECTUS_TOKEN": "${DIRECTUS_API_TOKEN}"
+      }
+    },
+    "hasura": {
+      "command": "node",
+      "args": ["node_modules/hasura-mcp-server/dist/cli.js"],
+      "env": {
+        "HASURA_GRAPHQL_ENDPOINT": "http://localhost:3004",
+        "HASURA_GRAPHQL_ADMIN_SECRET": "${HASURA_ADMIN_SECRET}"
+      }
+    }
+  }
+}

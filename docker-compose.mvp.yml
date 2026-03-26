@@ -1,0 +1,143 @@
+version: '3.8'
+
+# MVP: 3 PostgreSQL apps for Bash+DB AI-Native OS experiment
+# Apps: Gitea, Wiki.js, Mattermost
+
+x-postgres-common: &postgres-common
+  image: postgres:16-alpine
+  restart: unless-stopped
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U postgres"]
+    interval: 5s
+    timeout: 3s
+    retries: 10
+
+services:
+  # ══════════════════════════════════════════════
+  # Databases
+  # ══════════════════════════════════════════════
+
+  postgres-gitea:
+    <<: *postgres-common
+    container_name: pg-gitea
+    environment:
+      POSTGRES_DB: gitea
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${GITEA_DB_PASS:-gitea_secret}
+    ports:
+      - "5501:5432"
+    volumes:
+      - pgdata-gitea:/var/lib/postgresql/data
+      - ./db_init/gitea_init.sql:/docker-entrypoint-initdb.d/01_init.sql
+
+  postgres-wiki:
+    <<: *postgres-common
+    container_name: pg-wiki
+    environment:
+      POSTGRES_DB: wikijs
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${WIKI_DB_PASS:-wiki_secret}
+    ports:
+      - "5502:5432"
+    volumes:
+      - pgdata-wiki:/var/lib/postgresql/data
+      - ./db_init/wiki_init.sql:/docker-entrypoint-initdb.d/01_init.sql
+
+  postgres-mattermost:
+    <<: *postgres-common
+    container_name: pg-mattermost
+    environment:
+      POSTGRES_DB: mattermost
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${MM_DB_PASS:-mm_secret}
+    ports:
+      - "5504:5432"
+    volumes:
+      - pgdata-mattermost:/var/lib/postgresql/data
+      - ./db_init/mattermost_init.sql:/docker-entrypoint-initdb.d/01_init.sql
+
+  # ══════════════════════════════════════════════
+  # Applications
+  # ══════════════════════════════════════════════
+
+  gitea:
+    image: gitea/gitea:1.22
+    container_name: gitea
+    restart: unless-stopped
+    depends_on:
+      postgres-gitea:
+        condition: service_healthy
+    ports:
+      - "3000:3000"   # Web UI
+      - "2222:22"     # SSH
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      # Database
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=postgres-gitea:5432
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=postgres
+      - GITEA__database__PASSWD=${GITEA_DB_PASS:-gitea_secret}
+      # Server
+      - GITEA__server__ROOT_URL=http://localhost:3000/
+      - GITEA__server__DOMAIN=localhost
+      # Security - skip install page, auto-migrate DB
+      - GITEA__security__INSTALL_LOCK=true
+      - GITEA__security__SECRET_KEY=experiment-secret-key-2026
+    volumes:
+      - gitea-data:/data
+      - gitea-config:/etc/gitea
+
+  wikijs:
+    image: requarks/wiki:2
+    container_name: wikijs
+    restart: unless-stopped
+    depends_on:
+      postgres-wiki:
+        condition: service_healthy
+    ports:
+      - "3001:3000"
+    environment:
+      DB_TYPE: postgres
+      DB_HOST: postgres-wiki
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASS: ${WIKI_DB_PASS:-wiki_secret}
+      DB_NAME: wikijs
+
+  mattermost:
+    image: mattermost/mattermost-team-edition:9.11
+    container_name: mattermost
+    restart: unless-stopped
+    depends_on:
+      postgres-mattermost:
+        condition: service_healthy
+    ports:
+      - "3006:8065"
+    environment:
+      # Database
+      - MM_SQLSETTINGS_DRIVERNAME=postgres
+      - MM_SQLSETTINGS_DATASOURCE=postgres://postgres:${MM_DB_PASS:-mm_secret}@postgres-mattermost:5432/mattermost?sslmode=disable
+      # Service settings
+      - MM_SERVICESETTINGS_SITEURL=http://localhost:3006
+      - MM_SERVICESETTINGS_ENABLELOCALMODE=true
+      # Disable telemetry
+      - MM_LOGSETTINGS_ENABLEDIAGNOSTICS=false
+      - MM_LOGSETTINGS_CONSOLELEVEL=ERROR
+    volumes:
+      - mattermost-config:/mattermost/config
+      - mattermost-data:/mattermost/data
+      - mattermost-logs:/mattermost/logs
+      - mattermost-plugins:/mattermost/plugins
+
+volumes:
+  pgdata-gitea:
+  pgdata-wiki:
+  pgdata-mattermost:
+  gitea-data:
+  gitea-config:
+  mattermost-config:
+  mattermost-data:
+  mattermost-logs:
+  mattermost-plugins:

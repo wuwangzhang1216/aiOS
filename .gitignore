@@ -1,0 +1,32 @@
+# Environment & Secrets
+.env
+.env.tokens
+tokens.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# Third-party cloned repos
+mcp_control/miniflux_src/
+
+# Results (large, generated)
+results/transcripts/
+results/metrics/
+
+# Docker volumes
+pgdata-*/
+
+# Claude local config
+.claude/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,51 @@
+# T1.3: Send a Channel Message in Mattermost
+# Tier: 1 (Single-App CRUD)
+# App: Mattermost
+# Test: Agent can discover Mattermost's schema and INSERT a new post
+
+scenario_id: T1.3
+tier: 1
+apps: [mattermost]
+category: single_app_crud
+description: Send a message to a Mattermost channel via direct database access
+
+variants:
+  - id: T1.3a
+    name: Simple text message
+    task: >
+      Send a message "Hello from the AI agent! This is a test message."
+      to the "general" channel in Mattermost, posted by user "alice".
+      Discover the schema first, understand the required fields and ID format,
+      then insert the message.
+    postconditions_file: postconditions_a.sql
+
+  - id: T1.3b
+    name: Mention a user
+    task: >
+      Send a message to the "backend" channel in Mattermost as user "alice"
+      that mentions bob: "@bob can you review the latest PR for the connection pool fix?"
+    postconditions_file: postconditions_b.sql
+
+  - id: T1.3c
+    name: Message with code reference
+    task: >
+      Send a message to the "backend" channel in Mattermost as user "bob"
+      that includes a code reference: "Found the bug in `auth_middleware.py` line 42.
+      The token validation is using the wrong key."
+    postconditions_file: postconditions_c.sql
+
+  - id: T1.3d
+    name: Reply to existing message
+    task: >
+      Find the most recent message from "alice" in the "backend" channel.
+      Then send a reply from "bob" that says "Thanks for the update! I'll
+      test this in staging." The reply should reference the original message
+      (set the rootid/parentid if Mattermost schema supports threading).
+    postconditions_file: postconditions_d.sql
+
+  - id: T1.3e
+    name: Message in specific channel
+    task: >
+      Send a message to the "devops" channel in Mattermost as user "bob"
+      saying "Deployment to staging completed successfully. All health checks passing."
+    postconditions_file: postconditions_e.sql

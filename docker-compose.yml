@@ -1,0 +1,222 @@
+services:
+  # ════════════════════════════════════════════
+  # PostgreSQL instances (ALL apps use PG now)
+  # ════════════════════════════════════════════
+
+  pg-gitea:
+    image: postgres:16-alpine
+    container_name: pg-gitea
+    restart: unless-stopped
+    environment: { POSTGRES_DB: gitea, POSTGRES_USER: postgres, POSTGRES_PASSWORD: secret }
+    ports: ["5501:5432"]
+    healthcheck: { test: ["CMD", "pg_isready", "-U", "postgres"], interval: 3s, retries: 10 }
+
+  pg-wiki:
+    image: postgres:16-alpine
+    container_name: pg-wiki
+    restart: unless-stopped
+    environment: { POSTGRES_DB: wikijs, POSTGRES_USER: postgres, POSTGRES_PASSWORD: secret }
+    ports: ["5502:5432"]
+    healthcheck: { test: ["CMD", "pg_isready", "-U", "postgres"], interval: 3s, retries: 10 }
+
+  pg-mattermost:
+    image: postgres:16-alpine
+    container_name: pg-mattermost
+    restart: unless-stopped
+    environment: { POSTGRES_DB: mattermost, POSTGRES_USER: postgres, POSTGRES_PASSWORD: secret }
+    ports: ["5504:5432"]
+    healthcheck: { test: ["CMD", "pg_isready", "-U", "postgres"], interval: 3s, retries: 10 }
+
+  pg-vikunja:
+    image: postgres:16-alpine
+    container_name: pg-vikunja
+    restart: unless-stopped
+    environment: { POSTGRES_DB: vikunja, POSTGRES_USER: postgres, POSTGRES_PASSWORD: secret }
+    ports: ["5505:5432"]
+    healthcheck: { test: ["CMD", "pg_isready", "-U", "postgres"], interval: 3s, retries: 10 }
+
+  pg-nocodb:
+    image: postgres:16-alpine
+    container_name: pg-nocodb
+    restart: unless-stopped
+    environment: { POSTGRES_DB: nocodb, POSTGRES_USER: postgres, POSTGRES_PASSWORD: secret }
+    ports: ["5506:5432"]
+    healthcheck: { test: ["CMD", "pg_isready", "-U", "postgres"], interval: 3s, retries: 10 }
+
+  pg-miniflux:
+    image: postgres:16-alpine
+    container_name: pg-miniflux
+    restart: unless-stopped
+    environment: { POSTGRES_DB: miniflux, POSTGRES_USER: postgres, POSTGRES_PASSWORD: secret }
+    ports: ["5507:5432"]
+    healthcheck: { test: ["CMD", "pg_isready", "-U", "postgres"], interval: 3s, retries: 10 }
+
+  pg-grafana:
+    image: postgres:16-alpine
+    container_name: pg-grafana
+    restart: unless-stopped
+    environment: { POSTGRES_DB: grafana, POSTGRES_USER: postgres, POSTGRES_PASSWORD: secret }
+    ports: ["5508:5432"]
+    healthcheck: { test: ["CMD", "pg_isready", "-U", "postgres"], interval: 3s, retries: 10 }
+
+  pg-directus:
+    image: postgres:16-alpine
+    container_name: pg-directus
+    restart: unless-stopped
+    environment: { POSTGRES_DB: directus, POSTGRES_USER: postgres, POSTGRES_PASSWORD: secret }
+    ports: ["5509:5432"]
+    healthcheck: { test: ["CMD", "pg_isready", "-U", "postgres"], interval: 3s, retries: 10 }
+
+  pg-redmine:
+    image: postgres:16-alpine
+    container_name: pg-redmine
+    restart: unless-stopped
+    environment: { POSTGRES_DB: redmine, POSTGRES_USER: postgres, POSTGRES_PASSWORD: secret }
+    ports: ["5510:5432"]
+    healthcheck: { test: ["CMD", "pg_isready", "-U", "postgres"], interval: 3s, retries: 10 }
+
+  pg-memos:
+    image: postgres:16-alpine
+    container_name: pg-memos
+    restart: unless-stopped
+    environment: { POSTGRES_DB: memos, POSTGRES_USER: postgres, POSTGRES_PASSWORD: secret }
+    ports: ["5511:5432"]
+    healthcheck: { test: ["CMD", "pg_isready", "-U", "postgres"], interval: 3s, retries: 10 }
+
+  # ════════════════════════════════════════════
+  # Applications (10 apps, all PostgreSQL)
+  # ════════════════════════════════════════════
+
+  gitea:
+    image: gitea/gitea:1.22
+    container_name: gitea
+    depends_on: { pg-gitea: { condition: service_healthy } }
+    ports: ["3000:3000"]
+    environment:
+      - GITEA__database__DB_TYPE=postgres
+      - GITEA__database__HOST=pg-gitea:5432
+      - GITEA__database__NAME=gitea
+      - GITEA__database__USER=postgres
+      - GITEA__database__PASSWD=secret
+      - GITEA__security__INSTALL_LOCK=true
+      - GITEA__security__SECRET_KEY=experiment-key
+
+  wikijs:
+    image: requarks/wiki:2
+    container_name: wikijs
+    depends_on: { pg-wiki: { condition: service_healthy } }
+    ports: ["3001:3000"]
+    environment:
+      DB_TYPE: postgres
+      DB_HOST: pg-wiki
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASS: secret
+      DB_NAME: wikijs
+
+  vikunja:
+    image: vikunja/vikunja:latest
+    container_name: vikunja
+    user: "0"
+    depends_on: { pg-vikunja: { condition: service_healthy } }
+    ports: ["3002:3456"]
+    environment:
+      VIKUNJA_DATABASE_TYPE: postgres
+      VIKUNJA_DATABASE_HOST: pg-vikunja
+      VIKUNJA_DATABASE_DATABASE: vikunja
+      VIKUNJA_DATABASE_USER: postgres
+      VIKUNJA_DATABASE_PASSWORD: secret
+      VIKUNJA_SERVICE_PUBLICURL: http://localhost:3002
+    volumes:
+      - vikunja-files:/app/vikunja/files
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    depends_on: { pg-grafana: { condition: service_healthy } }
+    ports: ["3003:3000"]
+    environment:
+      GF_DATABASE_TYPE: postgres
+      GF_DATABASE_HOST: pg-grafana:5432
+      GF_DATABASE_NAME: grafana
+      GF_DATABASE_USER: postgres
+      GF_DATABASE_PASSWORD: secret
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: Admin123!
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+
+  hasura:
+    image: hasura/graphql-engine:latest
+    container_name: hasura
+    depends_on: { pg-memos: { condition: service_healthy } }
+    ports: ["3004:8080"]
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://postgres:secret@pg-memos:5432/memos
+      HASURA_GRAPHQL_ADMIN_SECRET: hasura-admin-secret
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+
+  nocodb:
+    image: nocodb/nocodb:latest
+    container_name: nocodb
+    depends_on: { pg-nocodb: { condition: service_healthy } }
+    ports: ["3005:8080"]
+    environment:
+      NC_DB: "pg://pg-nocodb:5432?u=postgres&p=secret&d=nocodb"
+
+  mattermost:
+    image: mattermost/mattermost-team-edition:9.11
+    container_name: mattermost
+    depends_on: { pg-mattermost: { condition: service_healthy } }
+    ports: ["3006:8065"]
+    environment:
+      - MM_SQLSETTINGS_DRIVERNAME=postgres
+      - MM_SQLSETTINGS_DATASOURCE=postgres://postgres:secret@pg-mattermost:5432/mattermost?sslmode=disable
+      - MM_SERVICESETTINGS_SITEURL=http://localhost:3006
+      - MM_SERVICESETTINGS_ENABLELOCALMODE=true
+    volumes:
+      - mattermost-config:/mattermost/config
+      - mattermost-data:/mattermost/data
+
+  miniflux:
+    image: miniflux/miniflux:latest
+    container_name: miniflux
+    depends_on: { pg-miniflux: { condition: service_healthy } }
+    ports: ["3007:8080"]
+    environment:
+      DATABASE_URL: postgres://postgres:secret@pg-miniflux:5432/miniflux?sslmode=disable
+      RUN_MIGRATIONS: "1"
+      CREATE_ADMIN: "1"
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: Admin123!
+
+  redmine:
+    image: redmine:latest
+    container_name: redmine
+    depends_on: { pg-redmine: { condition: service_healthy } }
+    ports: ["3008:3000"]
+    environment:
+      REDMINE_DB_POSTGRES: pg-redmine
+      REDMINE_DB_DATABASE: redmine
+      REDMINE_DB_USERNAME: postgres
+      REDMINE_DB_PASSWORD: secret
+
+  directus:
+    image: directus/directus:latest
+    container_name: directus
+    depends_on: { pg-directus: { condition: service_healthy } }
+    ports: ["3009:8055"]
+    environment:
+      DB_CLIENT: pg
+      DB_HOST: pg-directus
+      DB_PORT: "5432"
+      DB_DATABASE: directus
+      DB_USER: postgres
+      DB_PASSWORD: secret
+      SECRET: experiment-secret-key-2026
+      ADMIN_EMAIL: admin@experiment.com
+      ADMIN_PASSWORD: Admin123!
+
+volumes:
+  mattermost-config:
+  mattermost-data:
+  vikunja-files:

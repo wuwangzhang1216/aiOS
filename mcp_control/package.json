@@ -1,0 +1,18 @@
+{
+  "dependencies": {
+    "@0xk3vin/vikunja-mcp": "^1.1.1",
+    "@boringstudio_org/gitea-mcp": "^1.9.0",
+    "@cahaseler/wikijs-mcp": "^1.0.5",
+    "@dakatan/mcp-mattermost": "^0.0.5",
+    "@donach/mattermost-mcp": "^1.1.2",
+    "@mseep/mcp-bookstack": "^1.0.0",
+    "@thelabnyc/redmine-mcp": "^0.4.0",
+    "directus-mcp-server": "^1.0.0",
+    "hasura-mcp-server": "^0.1.2",
+    "leantime-mcp": "^1.6.5",
+    "mcp-grafana-npx": "^1.0.1",
+    "miniflux-mcp": "^0.0.12",
+    "n8n-mcp": "^2.40.5",
+    "nocodb-mcp-server": "^1.0.24"
+  }
+}

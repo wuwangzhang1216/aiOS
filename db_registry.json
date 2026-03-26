@@ -1,0 +1,66 @@
+{
+  "experiment": "bash-db-agent-os",
+  "version": "mvp-v1",
+  "llm": {
+    "provider": "openrouter",
+    "model": "minimax/minimax-m2.7",
+    "temperature": 0,
+    "max_tokens": 4096
+  },
+  "apps": [
+    {
+      "id": "gitea",
+      "name": "Gitea (Code & Git)",
+      "description": "Self-hosted Git service with issue tracking, pull requests, and code review",
+      "type": "postgresql",
+      "connection": {
+        "container": "pg-gitea",
+        "database": "gitea",
+        "user": "agent_rw"
+      },
+      "cli_connect": "docker exec pg-gitea psql -U agent_rw -d gitea",
+      "cli_command": "docker exec pg-gitea psql -U agent_rw -d gitea -c",
+      "permissions": ["read", "write"],
+      "key_tables": [
+        "repository", "issue", "comment", "\"user\"", "team",
+        "label", "issue_label", "milestone", "pull_request"
+      ]
+    },
+    {
+      "id": "wikijs",
+      "name": "Wiki.js (Knowledge Base)",
+      "description": "Modern wiki engine with markdown support, tagging, and page hierarchy",
+      "type": "postgresql",
+      "connection": {
+        "container": "pg-wiki",
+        "database": "wikijs",
+        "user": "agent_rw"
+      },
+      "cli_connect": "docker exec pg-wiki psql -U agent_rw -d wikijs",
+      "cli_command": "docker exec pg-wiki psql -U agent_rw -d wikijs -c",
+      "permissions": ["read", "write"],
+      "key_tables": [
+        "pages", "\"pageHistory\"", "\"pageLinks\"", "\"pageTags\"",
+        "tags", "comments", "users", "groups"
+      ]
+    },
+    {
+      "id": "mattermost",
+      "name": "Mattermost (Team Chat)",
+      "description": "Open-source team messaging with channels, direct messages, and integrations",
+      "type": "postgresql",
+      "connection": {
+        "container": "pg-mattermost",
+        "database": "mattermost",
+        "user": "agent_rw"
+      },
+      "cli_connect": "docker exec pg-mattermost psql -U agent_rw -d mattermost",
+      "cli_command": "docker exec pg-mattermost psql -U agent_rw -d mattermost -c",
+      "permissions": ["read", "write"],
+      "key_tables": [
+        "posts", "channels", "channelmembers", "users",
+        "teams", "teammembers", "reactions", "fileinfo"
+      ]
+    }
+  ]
+}

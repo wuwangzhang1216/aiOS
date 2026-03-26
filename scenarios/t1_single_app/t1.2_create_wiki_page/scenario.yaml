@@ -1,0 +1,53 @@
+# T1.2: Create a Wiki Page in Wiki.js
+# Tier: 1 (Single-App CRUD)
+# App: Wiki.js
+# Test: Agent can discover Wiki.js schema and INSERT a new page
+
+scenario_id: T1.2
+tier: 1
+apps: [wikijs]
+category: single_app_crud
+description: Create a new wiki page in Wiki.js via direct database access
+
+variants:
+  - id: T1.2a
+    name: Simple text page
+    task: >
+      Create a new wiki page in Wiki.js with path "test/simple-page",
+      title "Simple Test Page", and content "This is a simple test page
+      created by the AI agent." The page should be published and public.
+    postconditions_file: postconditions_a.sql
+
+  - id: T1.2b
+    name: Markdown formatted page
+    task: >
+      Create a new wiki page in Wiki.js with path "test/markdown-page",
+      title "Markdown Test", and markdown content that includes a heading,
+      a bullet list with 3 items, and a code block. The page should be published.
+    postconditions_file: postconditions_b.sql
+
+  - id: T1.2c
+    name: Page with tags
+    task: >
+      Create a new wiki page in Wiki.js with path "test/tagged-page",
+      title "Tagged Page", content "A page with tags for testing."
+      Then associate it with the "architecture" tag (which should already exist
+      from seed data).
+    postconditions_file: postconditions_c.sql
+
+  - id: T1.2d
+    name: Nested path page
+    task: >
+      Create a new wiki page in Wiki.js with a deeply nested path
+      "projects/backend/api/authentication", title "Authentication API Docs",
+      and content describing a basic auth flow.
+    postconditions_file: postconditions_d.sql
+
+  - id: T1.2e
+    name: Update existing page
+    task: >
+      Find the existing wiki page at path "home" and update its content
+      to add a new section at the end called "## Recent Updates" with the text
+      "- Agent test: system verified on March 2026". Do not overwrite the
+      existing content, only append to it.
+    postconditions_file: postconditions_e.sql

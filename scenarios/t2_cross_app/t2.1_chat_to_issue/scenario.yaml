@@ -1,0 +1,54 @@
+# T2.1: Create Gitea Issue from Mattermost Message
+# Tier: 2 (Cross-App Workflow)
+# Apps: Mattermost → Gitea
+# Test: Agent can SELECT from one DB and INSERT into another
+
+scenario_id: T2.1
+tier: 2
+apps: [mattermost, gitea]
+category: cross_app_workflow
+description: Read a chat message from Mattermost and create a corresponding issue in Gitea
+
+variants:
+  - id: T2.1a
+    name: Single message to issue
+    task: >
+      Find the message from bob in the "devops" Mattermost channel that mentions
+      "connection pool exhaustion". Create a Gitea issue in the "backend-api"
+      repository (owned by alice) with the message content as the issue body.
+      Set the issue title to a concise summary of the problem.
+    postconditions_file: postconditions_a.sql
+
+  - id: T2.1b
+    name: Message with code to issue
+    task: >
+      Find all messages in the "backend" Mattermost channel that mention "circuit breaker".
+      Create a Gitea issue in the "backend-api" repository with title
+      "Implement circuit breaker for downstream services" and include all relevant
+      message content in the issue body.
+    postconditions_file: postconditions_b.sql
+
+  - id: T2.1c
+    name: Multiple messages summarized
+    task: >
+      Find the 3 most recent messages from the "backend" Mattermost channel.
+      Create a single Gitea issue in the "backend-api" repository titled
+      "Backend discussion summary" with all 3 messages included in the body,
+      each attributed to its author.
+    postconditions_file: postconditions_c.sql
+
+  - id: T2.1d
+    name: Issue with label
+    task: >
+      Find the message about "rate limiting" in Mattermost's "backend" channel.
+      Create a Gitea issue in "backend-api" about it, and assign it the "feature"
+      label (which exists from seed data).
+    postconditions_file: postconditions_d.sql
+
+  - id: T2.1e
+    name: Issue assigned to author
+    task: >
+      Find messages from alice in the "sprint-planning" Mattermost channel.
+      Create a Gitea issue in "backend-api" based on what alice reported as
+      "Starting" work. Assign the issue to alice (set poster_id to alice's user id).
+    postconditions_file: postconditions_e.sql
