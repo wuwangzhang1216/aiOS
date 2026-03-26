@@ -1,0 +1,24 @@
+# T0.1: Schema Discovery (zero prior knowledge)
+# The agent must explore an unknown database and prove understanding via a write.
+scenario_id: T0.1
+tier: 0
+apps: [miniflux, vikunja]
+category: schema_discovery
+
+variants:
+  - id: T0.1a
+    task: >
+      You have access to the Miniflux database but you do NOT know its schema.
+      Explore the database to discover how it stores feeds, entries, and categories.
+      Then prove you understood the schema by creating a new category called "AI-Discovered".
+    postcondition: "SELECT 1 FROM categories WHERE title = 'AI-Discovered'"
+    target_db: miniflux
+
+  - id: T0.1b
+    task: >
+      You have access to the Vikunja database but you do NOT know its table names
+      or column names. Explore the schema to understand how tasks, projects, and
+      labels are organized. Then prove you understood by creating a task titled
+      "Schema exploration complete" in any project you find.
+    postcondition: "SELECT 1 FROM tasks WHERE title = 'Schema exploration complete'"
+    target_db: vikunja

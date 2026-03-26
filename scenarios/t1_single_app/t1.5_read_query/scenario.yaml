@@ -1,0 +1,34 @@
+# T1.5: Read & Query (complex filtering, aggregation, JOINs)
+# Tests SQL's query flexibility advantage over MCP's fixed tool interfaces.
+scenario_id: T1.5
+tier: 1
+apps: [vikunja, mattermost, gitea]
+category: single_app_read
+
+variants:
+  - id: T1.5a
+    task: >
+      Query the Vikunja database to find all tasks that have the "bug" label
+      AND are not yet completed (done = false). Report the task titles and
+      which project each belongs to. Post the results to the Mattermost
+      "backend" channel.
+    postcondition: "SELECT 1 FROM posts p JOIN channels c ON p.channelid = c.id WHERE c.name = 'backend' AND p.message LIKE '%bug%'"
+    target_db: mattermost
+
+  - id: T1.5b
+    task: >
+      Query the Mattermost database to count the number of messages per
+      channel and per user. Find which user has posted the most messages
+      and in which channel. Post a summary of these statistics to the
+      "general" channel.
+    postcondition: "SELECT 1 FROM posts p JOIN channels c ON p.channelid = c.id WHERE c.name = 'general' AND (p.message LIKE '%count%' OR p.message LIKE '%messages%' OR p.message LIKE '%total%')"
+    target_db: mattermost
+
+  - id: T1.5c
+    task: >
+      Query the Gitea database to find all open issues in the "backend-api"
+      repository that were created by alice. For each issue, also check if
+      it has any labels assigned. Report the results as a formatted list.
+      Post the results to the Mattermost "sprint-planning" channel.
+    postcondition: "SELECT 1 FROM posts p JOIN channels c ON p.channelid = c.id WHERE c.name = 'sprint-planning' AND p.message LIKE '%issue%'"
+    target_db: mattermost

@@ -1,12 +1,12 @@
 """
 Postcondition verifier for experiment scenarios.
 
-Executes pre-registered SQL postcondition queries against the databases
-and computes completion scores.
+Supports both file-based postconditions (legacy) and inline SQL postconditions.
 """
 
 import json
 import os
+import platform
 import re
 import subprocess
 import sys
@@ -20,9 +20,14 @@ DB_CONNECTIONS = {
         "database": "gitea",
         "user": "agent_ro",
     },
-    "wikijs": {
-        "container": "pg-wiki",
-        "database": "wikijs",
+    "miniflux": {
+        "container": "pg-miniflux",
+        "database": "miniflux",
+        "user": "agent_ro",
+    },
+    "vikunja": {
+        "container": "pg-vikunja",
+        "database": "vikunja",
         "user": "agent_ro",
     },
     "mattermost": {
@@ -32,89 +37,49 @@ DB_CONNECTIONS = {
     },
 }
 
-
-def parse_postconditions(sql_file: Path) -> list[dict]:
-    """
-    Parse a postconditions SQL file into individual checks.
-
-    Each postcondition is a SELECT that returns a boolean column.
-    Comments starting with '-- PC' identify each postcondition.
-    """
-    content = sql_file.read_text()
-    postconditions = []
-
-    # Split by postcondition comments
-    blocks = re.split(r'(--\s*PC\d+:.*)', content)
-
-    current_name = None
-    current_sql = ""
-
-    for block in blocks:
-        block = block.strip()
-        if not block:
-            continue
-
-        if re.match(r'--\s*PC\d+:', block):
-            # Save previous postcondition
-            if current_name and current_sql.strip():
-                postconditions.append({
-                    "name": current_name,
-                    "sql": current_sql.strip(),
-                })
-            current_name = block.lstrip("- ").strip()
-            current_sql = ""
-        else:
-            current_sql += block + "\n"
-
-    # Save last postcondition
-    if current_name and current_sql.strip():
-        postconditions.append({
-            "name": current_name,
-            "sql": current_sql.strip(),
-        })
-
-    return postconditions
+# Table-to-app mapping for auto-detection
+TABLE_APP_MAP = {
+    "gitea": ["repository", "issue", '"user"', "label", "issue_label",
+              "milestone", "pull_request", "comment"],
+    "miniflux": ["feeds", "entries", "categories", "feed_icons",
+                 "enclosures", "integrations"],
+    "vikunja": ["tasks", "projects", "labels", "label_tasks",
+                "buckets", "team_members"],
+    "mattermost": ["posts", "channels", "channelmembers", "teams",
+                    "teammembers", "reactions", "fileinfo"],
+}
 
 
-def determine_target_db(sql: str, postcond_file: Path) -> str:
+def _find_bash() -> str:
+    if platform.system() == "Windows":
+        git_bash = r"C:\Program Files\Git\usr\bin\bash.exe"
+        if os.path.exists(git_bash):
+            return git_bash
+    return "bash"
+
+
+BASH_PATH = _find_bash()
+
+
+def determine_target_db(sql: str, hint: str = None) -> str:
     """Determine which database a postcondition should run against."""
+    # Explicit hint takes priority
+    if hint and hint in DB_CONNECTIONS:
+        return hint
+
     sql_lower = sql.lower()
+    for app, tables in TABLE_APP_MAP.items():
+        for table in tables:
+            if table.strip('"').lower() in sql_lower:
+                return app
 
-    # Check table names to infer the target database
-    # Check table names to infer target DB (order matters — more specific first)
-    if any(t in sql_lower for t in ["repository", "issue", '"user"', "label", "issue_label", "milestone", "pull_request"]):
-        return "gitea"
-    if any(t in sql_lower for t in ["pages", '"pagetags"', '"pagehistory"', '"pagelinks"']):
-        return "wikijs"
-    if any(t in sql_lower for t in ["posts", "channels", "channelmembers"]):
-        return "mattermost"
-    # Secondary: less specific table names
-    if "tags" in sql_lower and "page" in sql_lower:
-        return "wikijs"
-
-    # Fallback: infer from file path
-    path_str = str(postcond_file).lower()
-    if "gitea" in path_str or "repo" in path_str or "issue" in path_str:
-        return "gitea"
-    if "wiki" in path_str or "page" in path_str:
-        return "wikijs"
-    if "mattermost" in path_str or "chat" in path_str or "message" in path_str or "channel" in path_str:
-        return "mattermost"
-
-    # Default to gitea
-    return "gitea"
+    return "gitea"  # fallback
 
 
 def execute_postcondition(sql: str, db_key: str) -> tuple[bool, str]:
-    """
-    Execute a single postcondition query.
-
-    Returns:
-        (passed: bool, detail: str)
-    """
+    """Execute a single postcondition query. Returns (passed, detail)."""
     conn = DB_CONNECTIONS[db_key]
 
-    # Escape single quotes in SQL for shell
     escaped_sql = sql.replace("'", "'\\''")
     cmd = (
         f"docker exec {conn['container']} psql -U {conn['user']} "
@@ -122,13 +87,9 @@ def execute_postcondition(sql: str, db_key: str) -> tuple[bool, str]:
     )
 
     try:
-        import platform
-        bash = r"C:\Program Files\Git\usr\bin\bash.exe" if platform.system() == "Windows" else "bash"
         result = subprocess.run(
-            [bash, "-c", cmd],
-            capture_output=True,
-            text=True,
-            timeout=10,
+            [BASH_PATH, "-c", cmd],
+            capture_output=True, text=True, timeout=10,
         )
 
         output = result.stdout.strip()
@@ -136,8 +97,6 @@ def execute_postcondition(sql: str, db_key: str) -> tuple[bool, str]:
         if result.returncode != 0:
             return False, f"Query error: {result.stderr[:200]}"
 
-        # Parse boolean result
-        # PostgreSQL returns 't' for true, 'f' for false
         if output.lower() in ("t", "true", "1"):
             return True, "passed"
         elif output.lower() in ("f", "false", "0"):
@@ -145,7 +104,6 @@ def execute_postcondition(sql: str, db_key: str) -> tuple[bool, str]:
         elif output == "":
             return False, "no rows returned"
         else:
-            # Try to interpret as a value
             return False, f"unexpected result: {output}"
 
     except subprocess.TimeoutExpired:
@@ -154,97 +112,107 @@ def execute_postcondition(sql: str, db_key: str) -> tuple[bool, str]:
         return False, f"execution error: {str(e)}"
 
 
-def verify_postconditions(postcond_file: Path, arm: str = "sql") -> dict:
-    """
-    Verify all postconditions in a file.
+def verify_inline_postcondition(sql: str, target_db: str = None) -> dict:
+    """Verify a single inline postcondition SQL string."""
+    if not sql:
+        return {"score": 1.0, "functional_class": "skip", "passed": 0,
+                "total": 0, "details": {"note": "no postcondition defined"}}
 
-    Returns:
-        dict with score, functional_class, and details
-    """
-    postconditions = parse_postconditions(postcond_file)
-
-    if not postconditions:
-        return {
-            "score": 0.0,
-            "functional_class": "unknown",
-            "details": {"error": "No postconditions found in file"},
-        }
-
-    results = {}
-    passed = 0
-    total = len(postconditions)
-
-    for pc in postconditions:
-        db_key = determine_target_db(pc["sql"], postcond_file)
-        ok, detail = execute_postcondition(pc["sql"], db_key)
-        results[pc["name"]] = {
-            "passed": ok,
-            "detail": detail,
-            "database": db_key,
-        }
-        if ok:
-            passed += 1
-
-    # Compute score
-    score = passed / total if total > 0 else 0.0
-
-    # Determine functional class
-    # A = Full: all postconditions pass (app-level correctness)
-    # B = Data-only: most pass but some fail (data exists but side effects missing)
-    # C = Partial: some pass, some fail
-    if score >= 1.0:
-        functional_class = "A"  # Full
-    elif score >= 0.5:
-        functional_class = "B"  # Data-only
-    elif score > 0:
-        functional_class = "C"  # Partial
-    else:
-        functional_class = "F"  # Failed
+    db_key = determine_target_db(sql, hint=target_db)
+    ok, detail = execute_postcondition(sql, db_key)
 
     return {
-        "score": round(score, 4),
-        "functional_class": functional_class,
-        "passed": passed,
-        "total": total,
-        "details": results,
+        "score": 1.0 if ok else 0.0,
+        "functional_class": "A" if ok else "F",
+        "passed": 1 if ok else 0,
+        "total": 1,
+        "details": {"postcondition": {"passed": ok, "detail": detail, "database": db_key}},
     }
 
 
+def parse_postconditions(sql_file: Path) -> list[dict]:
+    """Parse a postconditions SQL file into individual checks."""
+    content = sql_file.read_text()
+    postconditions = []
+    blocks = re.split(r'(--\s*PC\d+:.*)', content)
+    current_name = None
+    current_sql = ""
+
+    for block in blocks:
+        block = block.strip()
+        if not block:
+            continue
+        if re.match(r'--\s*PC\d+:', block):
+            if current_name and current_sql.strip():
+                postconditions.append({"name": current_name, "sql": current_sql.strip()})
+            current_name = block.lstrip("- ").strip()
+            current_sql = ""
+        else:
+            current_sql += block + "\n"
+
+    if current_name and current_sql.strip():
+        postconditions.append({"name": current_name, "sql": current_sql.strip()})
+
+    return postconditions
+
+
+def verify_postconditions(postcond_file: Path, arm: str = "sql") -> dict:
+    """Verify all postconditions in a file."""
+    postconditions = parse_postconditions(postcond_file)
+
+    if not postconditions:
+        return {"score": 0.0, "functional_class": "unknown", "passed": 0,
+                "total": 0, "details": {"error": "No postconditions found"}}
+
+    results = {}
+    passed = 0
+
+    for pc in postconditions:
+        db_key = determine_target_db(pc["sql"])
+        ok, detail = execute_postcondition(pc["sql"], db_key)
+        results[pc["name"]] = {"passed": ok, "detail": detail, "database": db_key}
+        if ok:
+            passed += 1
+
+    total = len(postconditions)
+    score = passed / total if total > 0 else 0.0
+
+    if score >= 1.0:
+        fc = "A"
+    elif score >= 0.5:
+        fc = "B"
+    elif score > 0:
+        fc = "C"
+    else:
+        fc = "F"
+
+    return {"score": round(score, 4), "functional_class": fc,
+            "passed": passed, "total": total, "details": results}
+
+
 def main():
-    """CLI interface for verifying postconditions."""
     if len(sys.argv) < 2:
         print("Usage: python verify_scenario.py <postconditions.sql> [arm]")
-        print("       python verify_scenario.py <result.json>")
+        print("       python verify_scenario.py --inline 'SELECT ...' [target_db]")
         sys.exit(1)
 
-    path = Path(sys.argv[1])
-    arm = sys.argv[2] if len(sys.argv) > 2 else "sql"
-
-    if path.suffix == ".json":
-        # Load result file and find the postconditions
-        with open(path) as f:
-            result = json.load(f)
-        print(f"Result for {result.get('scenario_id', '?')}:")
-        print(f"  Score: {result.get('completion_score', '?')}")
-        print(f"  Class: {result.get('functional_class', '?')}")
-        if "postconditions" in result:
-            for name, detail in result["postconditions"].items():
-                status = "PASS" if detail.get("passed") else "FAIL"
-                print(f"  [{status}] {name}: {detail.get('detail', '')}")
-    elif path.suffix == ".sql":
-        # Verify postconditions directly
+    if sys.argv[1] == "--inline":
+        sql = sys.argv[2]
+        target = sys.argv[3] if len(sys.argv) > 3 else None
+        result = verify_inline_postcondition(sql, target)
+        status = "PASS" if result["score"] >= 1.0 else "FAIL"
+        print(f"[{status}] {result['details']}")
+    else:
+        path = Path(sys.argv[1])
+        arm = sys.argv[2] if len(sys.argv) > 2 else "sql"
         results = verify_postconditions(path, arm)
         print(f"Score: {results['score']:.2f} ({results['passed']}/{results['total']})")
         print(f"Class: {results['functional_class']}")
-        print()
         for name, detail in results["details"].items():
             status = "PASS" if detail["passed"] else "FAIL"
             print(f"  [{status}] {name}")
             if not detail["passed"]:
                 print(f"         {detail['detail']}")
-    else:
-        print(f"Unknown file type: {path.suffix}")
-        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,23 @@
+# T1.6: Update Existing Records
+# Tests UPDATE operations — completing CRUD coverage.
+scenario_id: T1.6
+tier: 1
+apps: [gitea, vikunja]
+category: single_app_update
+
+variants:
+  - id: T1.6a
+    task: >
+      In the Gitea database, find the issue titled "Database connection pool
+      exhaustion" in the "backend-api" repository and close it
+      (set is_closed = true).
+    postcondition: "SELECT 1 FROM issue WHERE name LIKE '%connection pool%' AND is_closed = true"
+    target_db: gitea
+
+  - id: T1.6b
+    task: >
+      In the Vikunja database, mark the task "Fix connection pool exhaustion"
+      as completed (done = true). Also update its priority to 1 (low) since
+      it's now resolved.
+    postcondition: "SELECT 1 FROM tasks WHERE title LIKE '%connection pool%' AND done = true AND priority = 1"
+    target_db: vikunja
