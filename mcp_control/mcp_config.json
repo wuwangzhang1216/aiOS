@@ -4,22 +4,25 @@
     "gitea": {
       "command": "node",
       "args": ["node_modules/@boringstudio_org/gitea-mcp/index.js"],
-      "env": {}
+      "env": {
+        "GITEA_TOKEN": "${GITEA_API_TOKEN}",
+        "GITEA_API_URL": "http://localhost:3000/api/v1"
+      }
     },
     "miniflux": {
       "command": "node",
       "args": ["node_modules/miniflux-mcp/dist/server.js"],
       "env": {
-        "MINIFLUX_URL": "http://localhost:3001",
-        "MINIFLUX_API_KEY": "${MINIFLUX_API_TOKEN}"
+        "MINIFLUX_BASE_URL": "http://localhost:3001",
+        "MINIFLUX_TOKEN": "${MINIFLUX_API_TOKEN}"
       }
     },
     "vikunja": {
       "command": "node",
       "args": ["node_modules/@0xk3vin/vikunja-mcp/dist/index.js"],
       "env": {
-        "VIKUNJA_URL": "http://localhost:3002/api/v1",
-        "VIKUNJA_TOKEN": "${VIKUNJA_API_TOKEN}"
+        "VIKUNJA_URL": "http://localhost:3002",
+        "VIKUNJA_API_TOKEN": "${VIKUNJA_API_TOKEN}"
       }
     },
     "mattermost": {
@@ -28,7 +31,7 @@
       "env": {
         "MCP_MATTERMOST_URL": "http://localhost:3003",
         "MCP_MATTERMOST_TOKEN": "${MM_API_TOKEN}",
-        "MCP_MATTERMOST_TEAM_NAME": "experiment"
+        "MCP_MATTERMOST_TEAM_NAME": "engineering"
       }
     }
   }

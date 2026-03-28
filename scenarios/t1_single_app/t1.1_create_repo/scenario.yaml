@@ -8,11 +8,11 @@ variants:
   - id: T1.1a
     task: >
       Create a new public Git repository called "test-repo" owned by user "alice"
-      in the Gitea database. Description: "A test repository created by the AI agent".
+      in Gitea. Description: "A test repository created by the AI agent".
     postcondition: "SELECT 1 FROM repository WHERE lower_name = 'test-repo' AND owner_id = (SELECT id FROM \"user\" WHERE lower_name = 'alice')"
 
   - id: T1.1b
     task: >
       Create a private Git repository called "secret-project" owned by user "bob"
-      in Gitea. Set is_private to true. Description: "Confidential project".
+      in Gitea. Make it private. Description: "Confidential project".
     postcondition: "SELECT 1 FROM repository WHERE lower_name = 'secret-project' AND is_private = true"

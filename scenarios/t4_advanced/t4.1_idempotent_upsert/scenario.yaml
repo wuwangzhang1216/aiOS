@@ -1,0 +1,36 @@
+# T4.1: Idempotent Upsert (Conditional Logic)
+# Agent must check-then-act: update if exists, create if not. No duplicates.
+scenario_id: T4.1
+tier: 4
+apps: [vikunja, gitea]
+category: conditional_logic
+
+variants:
+  - id: T4.1a
+    task: >
+      Perform an idempotent sync of the following 3 tasks into the "Backend API"
+      project in Vikunja. For each: if a task with that exact title already exists,
+      update its priority to the specified value; if it does NOT exist, create it.
+
+      1. "Fix connection pool exhaustion" - priority 4
+      2. "Implement caching layer" - priority 2
+      3. "Add GraphQL endpoint" - priority 3
+
+      After completion, these 3 tasks must exist with exactly these priorities.
+      There must be NO duplicate tasks with the same title in the project.
+    postconditions_file: pc_a.sql
+
+  - id: T4.1b
+    task: >
+      Sync labels to Gitea's "backend-api" repository idempotently.
+      For each label: if it already exists on the repo, update its color;
+      if it does not exist, create it.
+
+      1. "bug" - color "#d73a4a"
+      2. "enhancement" - color "#84b6eb"
+      3. "security" - color "#e11d48"
+      4. "performance" - color "#fbca04"
+
+      After completion, all 4 labels must exist with exactly these colors.
+      No duplicate label names on the repo.
+    postconditions_file: pc_b.sql

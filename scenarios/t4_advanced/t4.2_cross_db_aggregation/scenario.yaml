@@ -1,0 +1,45 @@
+# T4.2: Cross-Database Aggregation with Exact Format
+# Agent must query multiple DBs, compute exact values, output strict format.
+scenario_id: T4.2
+tier: 4
+apps: [gitea, vikunja, mattermost]
+category: complex_aggregation
+
+variants:
+  - id: T4.2a
+    task: >
+      Compute a cross-application statistics summary and post it to the Mattermost
+      "sprint-planning" channel. The message must contain exactly these four lines
+      (one per line, in this exact format, with correct integer counts):
+
+      OPEN_ISSUES: <N>
+      OPEN_TASKS: <N>
+      COMPLETED_TASKS: <N>
+      CHANNEL_COUNT: <N>
+
+      Where:
+      - OPEN_ISSUES = number of open (not closed, not pull requests) issues in Gitea's "backend-api" repo
+      - OPEN_TASKS = number of incomplete tasks in Vikunja's "Backend API" project
+      - COMPLETED_TASKS = number of completed tasks across ALL Vikunja projects
+      - CHANNEL_COUNT = number of channels in the Mattermost "engineering" team
+
+      Use exact integer values. The format must be "KEY: VALUE" with exactly one space after the colon.
+    postconditions_file: pc_a.sql
+
+  - id: T4.2b
+    task: >
+      Compute per-user activity metrics across Gitea and Vikunja, then post
+      a structured report to the Mattermost "general" channel. The message
+      must contain exactly these four lines:
+
+      alice_issues: <N>
+      alice_tasks: <N>
+      bob_issues: <N>
+      bob_tasks: <N>
+
+      Where:
+      - alice_issues = number of issues authored by alice in Gitea's "backend-api" repo
+      - alice_tasks = number of tasks created by alice in ALL Vikunja projects
+      - bob_issues = number of issues authored by bob in Gitea's "backend-api" repo
+      - bob_tasks = number of tasks created by bob in ALL Vikunja projects
+    postconditions_file: pc_b.sql

@@ -67,10 +67,12 @@ def determine_target_db(sql: str, hint: str = None) -> str:
     if hint and hint in DB_CONNECTIONS:
         return hint
 
+    # Match whole table names using word boundaries, not substring
     sql_lower = sql.lower()
     for app, tables in TABLE_APP_MAP.items():
         for table in tables:
-            if table.strip('"').lower() in sql_lower:
+            clean = table.strip('"').lower()
+            if re.search(r'\b' + re.escape(clean) + r'\b', sql_lower):
                 return app
 
     return "gitea"  # fallback
@@ -97,12 +99,15 @@ def execute_postcondition(sql: str, db_key: str) -> tuple[bool, str]:
         if result.returncode != 0:
             return False, f"Query error: {result.stderr[:200]}"
 
-        if output.lower() in ("t", "true", "1"):
-            return True, "passed"
-        elif output.lower() in ("f", "false", "0"):
-            return False, f"condition not met (got: {output})"
-        elif output == "":
+        if output == "":
             return False, "no rows returned"
+
+        # Check first non-empty line — handles multi-row results
+        first_line = output.split("\n")[0].strip().lower()
+        if first_line in ("t", "true", "1"):
+            return True, "passed"
+        elif first_line in ("f", "false", "0"):
+            return False, f"condition not met (got: {output})"
         else:
             return False, f"unexpected result: {output}"
 

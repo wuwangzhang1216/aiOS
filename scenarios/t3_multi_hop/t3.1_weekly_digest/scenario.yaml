@@ -14,7 +14,8 @@ variants:
       4. Posting a formatted summary to Mattermost's "general" channel
 
       The digest should include sections: Code Issues, Interesting Reads, Open Tasks.
-    postcondition: "SELECT 1 FROM posts p JOIN channels c ON p.channelid = c.id WHERE c.name = 'general' AND p.message LIKE '%Issues%' AND p.message LIKE '%Tasks%'"
+    postcondition: "SELECT 1 FROM posts p JOIN channels c ON p.channelid = c.id WHERE c.name = 'general' AND p.message ILIKE '%issues%' AND p.message ILIKE '%tasks%'"
+    target_db: mattermost
 
   - id: T3.1b
     task: >
@@ -23,4 +24,4 @@ variants:
       2. For user bob: get his Gitea issues and Vikunja tasks
       3. Post the report to Mattermost's "sprint-planning" channel
          with a section per person showing their items.
-    postcondition: "SELECT 1 FROM posts p JOIN channels c ON p.channelid = c.id WHERE c.name = 'sprint-planning' AND p.message LIKE '%alice%' AND p.message LIKE '%bob%'"
+    postcondition: "SELECT 1 FROM posts p JOIN channels c ON p.channelid = c.id WHERE c.name = 'sprint-planning' AND p.message ILIKE '%alice%' AND p.message ILIKE '%bob%'"

@@ -1,0 +1,43 @@
+# T4.5: Transactional Consistency Across Apps
+# Agent must write to 3 databases with exact, consistent data.
+scenario_id: T4.5
+tier: 4
+apps: [gitea, vikunja, mattermost]
+category: transactional_consistency
+
+variants:
+  - id: T4.5a
+    task: >
+      Create a new feature request workflow across all three systems:
+
+      1. Create a Gitea issue in "backend-api" (owned by alice) with:
+         - title: "Implement WebSocket support"
+         - body: "Add real-time WebSocket endpoints for live updates"
+
+      2. Create a corresponding Vikunja task in "Backend API" project with:
+         - title: "Implement WebSocket support"
+         - description: "Tracking task for Gitea issue"
+         - priority: 3
+         - Assign the "feature" label to it
+
+      3. Post to Mattermost "backend" channel with exact message:
+         "NEW FEATURE: Implement WebSocket support | Gitea issue created | Vikunja task tracked"
+    postconditions_file: pc_a.sql
+
+  - id: T4.5b
+    task: >
+      Perform a bug triage across Gitea and Vikunja:
+
+      1. Find ALL issues in Gitea's "backend-api" repo whose title contains
+         the word "connection" (case insensitive).
+
+      2. For each such issue, ensure a Vikunja task exists in the "Backend API"
+         project with the EXACT SAME title as the Gitea issue. If a matching
+         task already exists, skip it. If no matching task exists, create it
+         with priority 4.
+
+      3. Post a triage summary to Mattermost "sprint-planning" channel.
+         The message must start with "BUG_TRIAGE:" followed by one line per
+         issue in the format:
+         - <issue_title>: SYNCED
+    postconditions_file: pc_b.sql

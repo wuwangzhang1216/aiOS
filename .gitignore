@@ -6,6 +6,9 @@ tokens.json
 # Python
 __pycache__/
 *.pyc
+*.egg-info/
+.venv/
+agent/.venv/
 
 # Node
 node_modules/

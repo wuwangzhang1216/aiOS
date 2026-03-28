@@ -158,6 +158,17 @@ class Agent:
             }
         ]
 
+    def _llm_call_with_retry(self, max_retries=2, **kwargs):
+        kwargs.setdefault("timeout", 120)  # 2 min max per LLM call
+        for attempt in range(max_retries + 1):
+            try:
+                return self.client.chat.completions.create(**kwargs)
+            except Exception as e:
+                if attempt < max_retries and any(k in str(e).lower() for k in ("timeout", "502", "503", "rate", "connect")):
+                    time.sleep(10 * (attempt + 1))
+                else:
+                    raise
+
     def run(
         self, task: str, scenario_id: str, run_number: int
     ) -> AgentTranscript:
@@ -193,17 +204,13 @@ class Agent:
         for turn in range(self.config.max_turns):
             # ── Call LLM via OpenRouter ──
             llm_start = time.time()
-            response = self.client.chat.completions.create(
+            response = self._llm_call_with_retry(
                 model=self.config.model,
                 max_tokens=self.config.max_tokens,
                 temperature=self.config.temperature,
                 tools=self.tools,
                 messages=messages,
-                extra_body={
-                    "provider": {
-                        "sort": "throughput",
-                    },
-                },
+                extra_body={"provider": {"sort": "throughput"}},
             )
             llm_duration_ms = (time.time() - llm_start) * 1000
 

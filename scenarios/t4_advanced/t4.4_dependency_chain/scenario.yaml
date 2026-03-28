@@ -1,0 +1,41 @@
+# T4.4: Multi-Step Dependency Chain
+# Each step depends on the output of the previous step.
+scenario_id: T4.4
+tier: 4
+apps: [gitea, vikunja, mattermost]
+category: multi_step_dependency
+
+variants:
+  - id: T4.4a
+    task: >
+      Execute this exact workflow:
+
+      Step 1: Find the Gitea issue in "backend-api" whose title mentions
+      "connection pool". Record its exact title.
+
+      Step 2: In Vikunja, find the task that is about the same topic
+      (connection pools). Add the "urgent" label to this task.
+
+      Step 3: Post a message to the Mattermost "devops" channel with the
+      exact text:
+      "ESCALATED: <gitea_issue_title> -> task labeled urgent"
+
+      Use the exact Gitea issue title (not the Vikunja task title) in the message.
+    postconditions_file: pc_a.sql
+
+  - id: T4.4b
+    task: >
+      Execute this exact workflow:
+
+      Step 1: Read alice's message in the Mattermost "sprint-planning" channel.
+      She mentions items with numbers like #2, #3, #4. Parse what she says
+      about each: which ones are "Completed" and which are "Starting".
+
+      Step 2: The numbers refer to Gitea issue IDs in the "backend-api" repo.
+      Close ONLY the issues that alice marked as "Completed".
+      Do NOT close issues she marked as "Starting".
+
+      Step 3: For each issue you closed, create a Vikunja task in the
+      "Backend API" project titled "Verify closure: <exact_issue_title>"
+      with priority 1.
+    postconditions_file: pc_b.sql

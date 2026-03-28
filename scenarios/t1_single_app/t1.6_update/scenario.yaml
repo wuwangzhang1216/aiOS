@@ -8,16 +8,14 @@ category: single_app_update
 variants:
   - id: T1.6a
     task: >
-      In the Gitea database, find the issue titled "Database connection pool
-      exhaustion" in the "backend-api" repository and close it
-      (set is_closed = true).
+      Find the issue titled "Database connection pool exhaustion" in
+      Gitea's "backend-api" repository and close it.
     postcondition: "SELECT 1 FROM issue WHERE name LIKE '%connection pool%' AND is_closed = true"
     target_db: gitea
 
   - id: T1.6b
     task: >
-      In the Vikunja database, mark the task "Fix connection pool exhaustion"
-      as completed (done = true). Also update its priority to 1 (low) since
-      it's now resolved.
+      Mark the task "Fix connection pool exhaustion" in Vikunja as completed.
+      Also set its priority to 1 (low) since it's now resolved.
     postcondition: "SELECT 1 FROM tasks WHERE title LIKE '%connection pool%' AND done = true AND priority = 1"
     target_db: vikunja

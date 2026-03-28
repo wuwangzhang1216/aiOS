@@ -1,0 +1,237 @@
+{
+  "models": [
+    "gemini-3-flash-preview",
+    "minimax-m2.7",
+    "gpt-5.4-mini",
+    "mimo-v2-pro"
+  ],
+  "model_ids": [
+    "google/gemini-3-flash-preview",
+    "minimax/minimax-m2.7",
+    "openai/gpt-5.4-mini",
+    "xiaomi/mimo-v2-pro"
+  ],
+  "arms": [
+    "sql",
+    "mcp"
+  ],
+  "tiers": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "n_variants": 31,
+  "n_runs": 3,
+  "total_jobs": 744,
+  "stats": {
+    "gemini-3-flash-preview_sql": {
+      "pass": 41,
+      "total": 93,
+      "rate": 0.441,
+      "avg_tokens": 13664,
+      "std_tokens": 16317,
+      "avg_time_s": 66.1,
+      "per_tier": {
+        "T1": {
+          "pass": 25,
+          "total": 39
+        },
+        "T2": {
+          "pass": 9,
+          "total": 18
+        },
+        "T3": {
+          "pass": 0,
+          "total": 6
+        },
+        "T4": {
+          "pass": 7,
+          "total": 30
+        }
+      }
+    },
+    "gemini-3-flash-preview_mcp": {
+      "pass": 23,
+      "total": 93,
+      "rate": 0.247,
+      "avg_tokens": 98487,
+      "std_tokens": 132489,
+      "avg_time_s": 45.2,
+      "per_tier": {
+        "T1": {
+          "pass": 15,
+          "total": 39
+        },
+        "T2": {
+          "pass": 3,
+          "total": 18
+        },
+        "T3": {
+          "pass": 2,
+          "total": 6
+        },
+        "T4": {
+          "pass": 3,
+          "total": 30
+        }
+      }
+    },
+    "minimax-m2.7_sql": {
+      "pass": 83,
+      "total": 93,
+      "rate": 0.892,
+      "avg_tokens": 46700,
+      "std_tokens": 28829,
+      "avg_time_s": 482.1,
+      "per_tier": {
+        "T1": {
+          "pass": 39,
+          "total": 39
+        },
+        "T2": {
+          "pass": 17,
+          "total": 18
+        },
+        "T3": {
+          "pass": 6,
+          "total": 6
+        },
+        "T4": {
+          "pass": 21,
+          "total": 30
+        }
+      }
+    },
+    "minimax-m2.7_mcp": {
+      "pass": 24,
+      "total": 93,
+      "rate": 0.258,
+      "avg_tokens": 117432,
+      "std_tokens": 115652,
+      "avg_time_s": 36.3,
+      "per_tier": {
+        "T1": {
+          "pass": 14,
+          "total": 39
+        },
+        "T2": {
+          "pass": 3,
+          "total": 18
+        },
+        "T3": {
+          "pass": 4,
+          "total": 6
+        },
+        "T4": {
+          "pass": 3,
+          "total": 30
+        }
+      }
+    },
+    "gpt-5.4-mini_sql": {
+      "pass": 75,
+      "total": 93,
+      "rate": 0.806,
+      "avg_tokens": 24274,
+      "std_tokens": 15855,
+      "avg_time_s": 11.1,
+      "per_tier": {
+        "T1": {
+          "pass": 38,
+          "total": 39
+        },
+        "T2": {
+          "pass": 14,
+          "total": 18
+        },
+        "T3": {
+          "pass": 4,
+          "total": 6
+        },
+        "T4": {
+          "pass": 19,
+          "total": 30
+        }
+      }
+    },
+    "gpt-5.4-mini_mcp": {
+      "pass": 24,
+      "total": 93,
+      "rate": 0.258,
+      "avg_tokens": 18492,
+      "std_tokens": 10586,
+      "avg_time_s": 5.5,
+      "per_tier": {
+        "T1": {
+          "pass": 12,
+          "total": 39
+        },
+        "T2": {
+          "pass": 6,
+          "total": 18
+        },
+        "T3": {
+          "pass": 3,
+          "total": 6
+        },
+        "T4": {
+          "pass": 3,
+          "total": 30
+        }
+      }
+    },
+    "mimo-v2-pro_sql": {
+      "pass": 83,
+      "total": 93,
+      "rate": 0.892,
+      "avg_tokens": 33348,
+      "std_tokens": 30607,
+      "avg_time_s": 52.5,
+      "per_tier": {
+        "T1": {
+          "pass": 39,
+          "total": 39
+        },
+        "T2": {
+          "pass": 17,
+          "total": 18
+        },
+        "T3": {
+          "pass": 6,
+          "total": 6
+        },
+        "T4": {
+          "pass": 21,
+          "total": 30
+        }
+      }
+    },
+    "mimo-v2-pro_mcp": {
+      "pass": 31,
+      "total": 93,
+      "rate": 0.333,
+      "avg_tokens": 146698,
+      "std_tokens": 120528,
+      "avg_time_s": 48.9,
+      "per_tier": {
+        "T1": {
+          "pass": 15,
+          "total": 39
+        },
+        "T2": {
+          "pass": 7,
+          "total": 18
+        },
+        "T3": {
+          "pass": 6,
+          "total": 6
+        },
+        "T4": {
+          "pass": 3,
+          "total": 30
+        }
+      }
+    }
+  }
+}

@@ -1,9 +1,0 @@
-{
-  "description": "This is ALL an AI agent needs to operate 4 applications. One map. One tool (bash).",
-  "apps": {
-    "gitea":      { "what": "Git & Code",        "db": "docker exec pg-gitea psql -U postgres -d gitea" },
-    "miniflux":   { "what": "RSS Reader",         "db": "docker exec pg-miniflux psql -U postgres -d miniflux" },
-    "vikunja":    { "what": "Task Management",    "db": "docker exec pg-vikunja psql -U postgres -d vikunja" },
-    "mattermost": { "what": "Team Chat",          "db": "docker exec pg-mattermost psql -U postgres -d mattermost" }
-  }
-}

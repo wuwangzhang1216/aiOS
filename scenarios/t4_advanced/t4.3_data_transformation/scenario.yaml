@@ -1,0 +1,32 @@
+# T4.3: Data Transformation with Exact Format Requirements
+# Agent must read, transform precisely, and write with exact formatting.
+scenario_id: T4.3
+tier: 4
+apps: [miniflux, gitea, vikunja, mattermost]
+category: data_transformation
+
+variants:
+  - id: T4.3a
+    task: >
+      For each unread RSS entry in Miniflux from the "Hacker News" feed,
+      create a Gitea issue in the "backend-api" repository (owned by alice) with:
+      - Title: exactly "[HN] " followed by the entry title
+        (e.g., "[HN] Show HN: A new approach to database migrations")
+      - Body: exactly "Source: <entry_url>" on the first line, then
+        "Author: <entry_author>" on the second line. Nothing else.
+
+      Do NOT create issues for entries from other feeds.
+      Create exactly one issue per matching entry.
+    postconditions_file: pc_a.sql
+
+  - id: T4.3b
+    task: >
+      For each incomplete task in Vikunja's "Backend API" project
+      that has at least one label assigned, create a Mattermost post in the
+      "backend" channel with the exact message format:
+
+      TASK: <task_title> | LABEL: <label_title> | PRIORITY: <priority>
+
+      If a task has multiple labels, use the first label alphabetically.
+      Create exactly one post per qualifying task. No extra text.
+    postconditions_file: pc_b.sql

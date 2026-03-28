@@ -1,10 +1,12 @@
 """
 Batch runner: executes all scenario variants sequentially.
-Supports both inline postconditions and file-based postconditions.
+Supports multiple models, multiple runs, both arms (sql/mcp), reseed between variants.
 """
 
 import json
+import subprocess
 import time
+from datetime import datetime
 from pathlib import Path
 
 import yaml
@@ -12,9 +14,17 @@ import yaml
 from agent import Agent, AgentConfig
 from verify_scenario import verify_inline_postcondition, verify_postconditions
 
+MODELS = [
+    "minimax/minimax-m2.7",
+    "xiaomi/mimo-v2-pro",
+    "google/gemini-3-flash-preview",
+    "openai/gpt-5.4-mini",
+]
+
+PROJECT_ROOT = Path(__file__).parent.parent
+
 
 def load_all_scenarios(scenarios_root: Path) -> list[dict]:
-    """Load all scenarios with their variants."""
     scenarios = []
     for sf in sorted(scenarios_root.rglob("scenario.yaml")):
         with open(sf, encoding="utf-8") as f:
@@ -25,8 +35,6 @@ def load_all_scenarios(scenarios_root: Path) -> list[dict]:
 
 
 def verify_variant(variant: dict, scenario_dir: Path, arm: str) -> dict:
-    """Verify postconditions for a variant (inline or file-based)."""
-    # Inline postcondition (new format)
     if "postcondition" in variant:
         sql = variant["postcondition"]
         if not sql:
@@ -34,14 +42,40 @@ def verify_variant(variant: dict, scenario_dir: Path, arm: str) -> dict:
                     "passed": 0, "total": 0, "details": {}}
         target_db = variant.get("target_db")
         return verify_inline_postcondition(sql, target_db)
-
-    # File-based postcondition (legacy format)
     if "postconditions_file" in variant:
         pc_file = scenario_dir / variant["postconditions_file"]
         if pc_file.exists():
             return verify_postconditions(pc_file, arm)
-
     return {"score": 0, "functional_class": "?", "details": {}}
+
+
+def model_short(model: str) -> str:
+    return model.split("/")[-1]
+
+
+def reseed(arm: str = "both"):
+    """Clean and reseed all databases. ~5s."""
+    script = PROJECT_ROOT / "scripts" / "reseed.sh"
+    result = subprocess.run(
+        ["bash", str(script), "--arm", arm],
+        capture_output=True, text=True, timeout=60,
+    )
+    if result.returncode != 0:
+        print(f"    [reseed warning] {result.stderr[:200]}")
+
+
+def llm_call_with_retry(client, max_retries=2, **kwargs):
+    """Call LLM with retry on transient errors."""
+    for attempt in range(max_retries + 1):
+        try:
+            return client.chat.completions.create(**kwargs)
+        except Exception as e:
+            if attempt < max_retries and ("timeout" in str(e).lower() or "502" in str(e) or "503" in str(e) or "rate" in str(e).lower()):
+                wait = 10 * (attempt + 1)
+                print(f"\n    [retry {attempt+1}/{max_retries}] {str(e)[:80]}... waiting {wait}s")
+                time.sleep(wait)
+            else:
+                raise
 
 
 def run_batch(
@@ -51,125 +85,217 @@ def run_batch(
     arm: str = "sql",
     tier_filter: int = None,
     scenario_filter: str = None,
+    models: list[str] = None,
+    runs: int = 1,
+    do_reseed: bool = True,
 ):
-    """Run one pass of all scenarios (1 run per variant)."""
+    if models is None:
+        models = MODELS
+
     scenarios = load_all_scenarios(scenarios_root)
     if tier_filter is not None:
         scenarios = [s for s in scenarios if s.get("tier") == tier_filter]
     if scenario_filter:
         scenarios = [s for s in scenarios if scenario_filter in s["scenario_id"]]
 
-    config = AgentConfig(arm=arm, registry_path=str(registry_path))
-    results = []
-    total = sum(len(s["variants"]) for s in scenarios)
-    done = 0
+    arms = ["sql", "mcp"] if arm == "both" else [arm]
 
-    print(f"{'='*60}")
-    print(f"  Batch Run: {total} variants, arm={arm}")
-    print(f"{'='*60}\n")
+    if "mcp" in arms:
+        from mcp_agent import MCPAgent
 
-    for scenario in scenarios:
-        sid = scenario["scenario_id"]
-        desc = scenario.get("description", "")[:60] if isinstance(scenario.get("description"), str) else sid
-        print(f"── {sid}: {desc}")
-        scenario_dir = scenario["_dir"]
+    variants = []
+    for s in scenarios:
+        for v in s["variants"]:
+            variants.append((s, v))
 
-        for variant in scenario["variants"]:
-            done += 1
-            vid = variant["id"]
-            print(f"  [{done}/{total}] {vid}...", end=" ", flush=True)
+    total_jobs = len(variants) * len(models) * runs * len(arms)
 
-            agent = Agent(config)
-            start = time.time()
+    # Resume: load existing results to skip completed jobs
+    out_file = output_dir / f"batch_{arm}_multi.json"
+    all_results = []
+    completed_keys = set()
+    if out_file.exists():
+        try:
+            with open(out_file) as f:
+                data = json.load(f)
+            all_results = data.get("results", []) if isinstance(data, dict) else data
+            for r in all_results:
+                completed_keys.add((r.get("model",""), r.get("arm",""), r.get("variant",""), r.get("run",0)))
+            print(f"  Resuming: {len(completed_keys)} jobs already done")
+        except Exception:
+            pass
+    done = len(completed_keys)
 
-            try:
-                transcript = agent.run(variant["task"], vid, run_number=1)
-                elapsed = time.time() - start
+    print(f"{'='*70}")
+    print(f"  Experiment: {len(variants)} variants x {len(models)} models x {runs} runs x {len(arms)} arms = {total_jobs} jobs")
+    print(f"  Arms: {arms} | Models: {[model_short(m) for m in models]}")
+    print(f"  Reseed: {'ON' if do_reseed else 'OFF'} | Remaining: {total_jobs - done}")
+    print(f"{'='*70}\n")
 
-                pc = verify_variant(variant, scenario_dir, arm)
+    for model in models:
+        model_tag = model_short(model)
+        print(f"\n{'─'*70}")
+        print(f"  MODEL: {model}")
+        print(f"{'─'*70}")
 
-                result = {
-                    "variant": vid,
-                    "tier": scenario.get("tier"),
-                    "category": scenario.get("category"),
-                    "arm": arm,
-                    "score": pc["score"],
-                    "class": pc["functional_class"],
-                    "turns": len(transcript.turns),
-                    "tokens": transcript.measurements.get("total_tokens", {}),
-                    "sql_ops": transcript.measurements.get("sql_ops", {}),
-                    "elapsed_s": round(elapsed, 1),
-                    "pc_details": pc.get("details", {}),
-                }
-                results.append(result)
+        for run_num in range(1, runs + 1):
+            for scenario, variant in variants:
+                for current_arm in arms:
+                    vid = variant["id"]
+                    scenario_dir = scenario["_dir"]
 
-                status = "PASS" if pc["score"] >= 0.75 else "PARTIAL" if pc["score"] > 0 else "FAIL"
-                if pc["functional_class"] == "skip":
-                    status = "SKIP"
-                tok = result["tokens"].get("total", "?")
-                print(f"{status} (score={pc['score']:.2f}, {elapsed:.1f}s, {tok} tok)")
+                    # Skip if already completed (resume mode)
+                    job_key = (model, current_arm, vid, run_num)
+                    if job_key in completed_keys:
+                        done += 1
+                        continue
 
-                # Save transcript
-                t_dir = output_dir / "transcripts" / arm / vid
-                t_dir.mkdir(parents=True, exist_ok=True)
-                with open(t_dir / "run_1.json", "w") as f:
-                    json.dump(transcript.to_dict(), f, indent=2, default=str)
+                    done += 1
+                    label = f"[{done}/{total_jobs}] {model_tag} r{run_num} {current_arm} {vid}"
+                    print(f"  {label}...", end=" ", flush=True)
 
-            except Exception as e:
-                elapsed = time.time() - start
-                print(f"ERROR ({elapsed:.1f}s): {e}")
-                results.append({
-                    "variant": vid, "tier": scenario.get("tier"),
-                    "category": scenario.get("category"),
-                    "arm": arm, "score": 0,
-                    "class": "F", "error": str(e), "elapsed_s": round(elapsed, 1),
-                })
+                    # Reseed before each variant
+                    if do_reseed:
+                        reseed(arm=current_arm)
 
-    # Summary
-    print(f"\n{'='*60}")
+                    config = AgentConfig(
+                        arm=current_arm,
+                        registry_path=str(registry_path),
+                        model=model,
+                    )
+
+                    if current_arm == "mcp":
+                        agent = MCPAgent(config)
+                    else:
+                        agent = Agent(config)
+
+                    start = time.time()
+                    try:
+                        transcript = agent.run(variant["task"], vid, run_number=run_num)
+                        elapsed = time.time() - start
+
+                        pc = verify_variant(variant, scenario_dir, current_arm)
+
+                        result = {
+                            "variant": vid,
+                            "tier": scenario.get("tier"),
+                            "category": scenario.get("category"),
+                            "arm": current_arm,
+                            "model": model,
+                            "run": run_num,
+                            "score": pc["score"],
+                            "class": pc["functional_class"],
+                            "turns": len(transcript.turns),
+                            "tokens": transcript.measurements.get("total_tokens", {}),
+                            "sql_ops": transcript.measurements.get("sql_ops", {}),
+                            "mcp_ops": transcript.measurements.get("mcp_ops", {}),
+                            "elapsed_s": round(elapsed, 1),
+                            "pc_details": pc.get("details", {}),
+                        }
+                        all_results.append(result)
+
+                        status = "PASS" if pc["score"] >= 0.75 else "PART" if pc["score"] > 0 else "FAIL"
+                        if pc["functional_class"] == "skip":
+                            status = "SKIP"
+                        tok = result["tokens"].get("total", "?")
+                        print(f"{status} ({elapsed:.1f}s, {tok} tok)")
+
+                        # Save transcript
+                        t_dir = output_dir / "transcripts" / current_arm / model_tag / vid
+                        t_dir.mkdir(parents=True, exist_ok=True)
+                        with open(t_dir / f"run_{run_num}.json", "w") as f:
+                            json.dump(transcript.to_dict(), f, indent=2, default=str)
+
+                    except Exception as e:
+                        elapsed = time.time() - start
+                        print(f"ERROR ({elapsed:.1f}s): {e}")
+                        all_results.append({
+                            "variant": vid, "tier": scenario.get("tier"),
+                            "category": scenario.get("category"),
+                            "arm": current_arm, "model": model, "run": run_num,
+                            "score": 0, "class": "F", "error": str(e),
+                            "elapsed_s": round(elapsed, 1),
+                        })
+
+                    # Incremental save
+                    _save_results(output_dir, arm, all_results, models, runs, arms, len(variants))
+
+    _print_summary(all_results, models, arms)
+    return all_results
+
+
+def _save_results(output_dir: Path, arm: str, results: list[dict],
+                  models=None, runs=None, arms=None, n_variants=None):
+    output_dir.mkdir(parents=True, exist_ok=True)
+    out_file = output_dir / f"batch_{arm}_multi.json"
+    output = {
+        "metadata": {
+            "experiment": "aios-sql-vs-mcp",
+            "date": datetime.now().isoformat(),
+            "models": models or [],
+            "runs": runs,
+            "arms": arms or [],
+            "variants": n_variants or 0,
+        },
+        "results": results,
+    }
+    with open(out_file, "w") as f:
+        json.dump(output, f, indent=2, default=str)
+
+
+def _print_summary(results: list[dict], models: list[str], arms: list[str]):
+    print(f"\n\n{'='*70}")
     print(f"  RESULTS SUMMARY")
-    print(f"{'='*60}")
-    passed = sum(1 for r in results if r["score"] >= 0.75)
-    partial = sum(1 for r in results if 0 < r["score"] < 0.75)
-    failed = sum(1 for r in results if r["score"] == 0 and r.get("class") != "skip")
-    skipped = sum(1 for r in results if r.get("class") == "skip")
-    scored = [r for r in results if r.get("class") != "skip"]
-    avg_score = sum(r["score"] for r in scored) / max(len(scored), 1)
-    avg_tokens = sum(r.get("tokens", {}).get("total", 0) for r in results) / max(len(results), 1)
+    print(f"{'='*70}\n")
 
-    print(f"  Total: {len(results)} | Pass: {passed} | Partial: {partial} | Fail: {failed} | Skip: {skipped}")
-    print(f"  Avg score: {avg_score:.2f} | Avg tokens: {avg_tokens:.0f}")
+    header = f"  {'Model':<22s} {'Arm':<5s} {'Pass':>6s} {'Rate':>7s} {'Avg tok':>10s} {'Avg time':>10s}"
+    print(header)
+    print(f"  {'─'*62}")
 
-    # Per-tier breakdown
+    for model in models:
+        for arm in arms:
+            mr = [r for r in results if r["model"] == model and r["arm"] == arm]
+            if not mr:
+                continue
+            scored = [r for r in mr if r.get("class") != "skip"]
+            passed = sum(1 for r in scored if r["score"] >= 0.75)
+            total = len(scored)
+            rate = f"({100*passed/max(total,1):.0f}%)"
+            avg_tok = sum(r.get("tokens", {}).get("total", 0) for r in mr) / max(len(mr), 1)
+            avg_t = sum(r.get("elapsed_s", 0) for r in mr) / max(len(mr), 1)
+            tag = model_short(model)
+            print(f"  {tag:<22s} {arm:<5s} {passed}/{total:>3} {rate:>7s} {avg_tok:>10,.0f} {avg_t:>9.1f}s")
+
+    # Per-tier
     tiers = sorted(set(r.get("tier") for r in results if r.get("tier") is not None))
-    for tier in tiers:
-        tier_results = [r for r in results if r.get("tier") == tier]
-        tier_pass = sum(1 for r in tier_results if r["score"] >= 0.75)
-        print(f"  Tier {tier}: {tier_pass}/{len(tier_results)} passed")
+    if tiers:
+        print(f"\n  Per-tier pass rates:")
+        tier_hdr = f"  {'Model':<22s} {'Arm':<5s}" + "".join(f" {'T'+str(t):>6s}" for t in tiers)
+        print(tier_hdr)
+        print(f"  {'─'*55}")
+        for model in models:
+            for arm in arms:
+                tag = model_short(model)
+                cells = []
+                for t in tiers:
+                    tr = [r for r in results if r["model"] == model and r["arm"] == arm
+                          and r.get("tier") == t and r.get("class") != "skip"]
+                    p = sum(1 for r in tr if r["score"] >= 0.75)
+                    cells.append(f"{p}/{len(tr)}")
+                print(f"  {tag:<22s} {arm:<5s}" + "".join(f" {c:>6s}" for c in cells))
 
     print()
-    for r in results:
-        s = "PASS" if r["score"] >= 0.75 else "PART" if r["score"] > 0 else "FAIL"
-        if r.get("class") == "skip":
-            s = "SKIP"
-        cat = r.get("category", "")[:15]
-        print(f"  [{s:4s}] {r['variant']:8s} T{r.get('tier','?')} {cat:15s} {r.get('elapsed_s',0):5.1f}s  {r.get('tokens',{}).get('total','?'):>6} tok")
-
-    # Save aggregate
-    output_dir.mkdir(parents=True, exist_ok=True)
-    with open(output_dir / f"batch_{arm}.json", "w") as f:
-        json.dump(results, f, indent=2, default=str)
-
-    print(f"\n  Saved to {output_dir / f'batch_{arm}.json'}")
-    return results
 
 
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--arm", default="sql", choices=["sql", "api", "mcp"])
-    parser.add_argument("--tier", type=int, default=None, help="Filter by tier (0, 1, 2, or 3)")
-    parser.add_argument("--scenario", default=None, help="Filter by scenario ID")
+    parser.add_argument("--arm", default="both", choices=["sql", "mcp", "both"])
+    parser.add_argument("--tier", type=int, default=None)
+    parser.add_argument("--scenario", default=None)
+    parser.add_argument("--models", nargs="+", default=None)
+    parser.add_argument("--runs", type=int, default=3)
+    parser.add_argument("--no-reseed", action="store_true")
     parser.add_argument("--scenarios-dir", default="../scenarios")
     parser.add_argument("--registry", default="../db_registry.json")
     parser.add_argument("--output", default="../results")
@@ -182,4 +308,7 @@ if __name__ == "__main__":
         arm=args.arm,
         tier_filter=args.tier,
         scenario_filter=args.scenario,
+        models=args.models,
+        runs=args.runs,
+        do_reseed=not args.no_reseed,
     )
